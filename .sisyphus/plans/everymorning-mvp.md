@@ -287,7 +287,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ---
 
-- [ ] 3. Telegram 봇 생성 + 기본 설정
+- [x] 3. Telegram 봇 생성 + 기본 설정
 
   **What to do**:
   - @BotFather로 새 봇 생성 (`everymorning_bot` 또는 유사)
