@@ -425,7 +425,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ---
 
-- [ ] 6. 논문 스코어링 알고리즘
+- [x] 6. 논문 스코어링 알고리즘
 
   **What to do**:
   - 스코어링 함수 구현:
