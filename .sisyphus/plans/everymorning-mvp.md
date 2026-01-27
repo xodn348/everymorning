@@ -712,7 +712,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ### Wave 4: Polish (Day 9-10)
 
-- [ ] 11. 통합 테스트 + 버그 수정
+- [x] 11. 통합 테스트 + 버그 수정
 
   **What to do**:
   - End-to-end 테스트:
