@@ -857,5 +857,5 @@ curl https://everymorning.vercel.app  # → 200 OK
 - [ ] 이메일 다이제스트 수신 확인 (TOP 3 논문 구조화 요약)
 - [ ] Telegram 다이제스트 수신 확인
 - [ ] 관심 분야 선택 기능 동작 확인
-- [ ] GitHub repo에 README + .env.example 포함
-- [ ] **총 비용 완전 $0** (Groq 무료 티어)
+- [x] GitHub repo에 README + .env.example 포함
+- [x] **총 비용 완전 $0** (Groq 무료 티어)
