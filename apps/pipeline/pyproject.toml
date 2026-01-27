@@ -1,0 +1,10 @@
+[project]
+name = "pipeline"
+version = "0.1.0"
+description = "STEM paper digest pipeline service"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+]

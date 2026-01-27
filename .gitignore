@@ -205,3 +205,17 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Node.js / Next.js (apps/web)
+apps/web/node_modules/
+apps/web/.next/
+apps/web/out/
+apps/web/build/
+apps/web/.env.local
+apps/web/.env.*.local
+
+# Python / uv (apps/pipeline)
+apps/pipeline/.venv/
+apps/pipeline/__pycache__/
+apps/pipeline/*.egg-info/
+apps/pipeline/.uv/
