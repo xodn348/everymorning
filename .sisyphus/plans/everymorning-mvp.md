@@ -477,7 +477,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ---
 
-- [ ] 7. LLM 요약 생성기 (Groq - 완전 무료)
+- [x] 7. LLM 요약 생성기 (Groq - 완전 무료)
 
   **What to do**:
   - **Groq API 클라이언트** (Llama 3.1 70B, 무료)

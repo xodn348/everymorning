@@ -7,7 +7,7 @@ from src.db import get_supabase_client
 
 SEMANTIC_SCHOLAR_API = "https://api.semanticscholar.org/graph/v1"
 
-# STEM 분야 매핑
+# STEM field mapping
 FIELD_MAPPING = {
     "cs": "Computer Science",
     "physics": "Physics",
@@ -18,12 +18,12 @@ FIELD_MAPPING = {
 
 def fetch_papers_by_field(field: str, days: int = 7, limit: int = 50) -> List[Dict[str, Any]]:
     """
-    Semantic Scholar API로 특정 분야의 최근 논문 수집
+    Fetch recent papers from Semantic Scholar API by field
     Rate limit: 1 request per second
     """
     url = f"{SEMANTIC_SCHOLAR_API}/paper/search"
 
-    # 최근 N일 논문
+    # Papers from last N days
     date_from = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
 
     params = {
@@ -47,7 +47,7 @@ def fetch_papers_by_field(field: str, days: int = 7, limit: int = 50) -> List[Di
 
 def fetch_all_fields(days: int = 7, limit_per_field: int = 50) -> List[Dict[str, Any]]:
     """
-    모든 STEM 분야에서 논문 수집
+    Fetch papers from all STEM fields
     """
     all_papers = []
 
@@ -66,7 +66,7 @@ def fetch_all_fields(days: int = 7, limit_per_field: int = 50) -> List[Dict[str,
 
 def save_papers_to_db(papers: List[Dict[str, Any]]) -> int:
     """
-    논문을 Supabase에 저장 (중복 체크)
+    Save papers to Supabase (with duplicate check)
     """
     supabase = get_supabase_client()
     saved_count = 0
@@ -97,7 +97,7 @@ def save_papers_to_db(papers: List[Dict[str, Any]]) -> int:
 
 def main():
     """
-    메인 실행: 논문 수집 + DB 저장
+    Main: Fetch papers and save to DB
     """
     print("Fetching papers from Semantic Scholar...")
     papers = fetch_all_fields(days=7, limit_per_field=50)

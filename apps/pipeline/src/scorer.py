@@ -4,7 +4,7 @@ from src.db import get_supabase_client
 
 def calculate_score(paper: Dict[str, Any]) -> float:
     """
-    논문 스코어 계산
+    Calculate paper score
     
     Score = citation_velocity * 0.35 +
             influential_ratio * 0.25 +
@@ -54,7 +54,7 @@ def calculate_score(paper: Dict[str, Any]) -> float:
 
 def score_papers(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    모든 논문에 스코어 계산 및 정렬
+    Calculate scores for all papers and sort
     """
     for paper in papers:
         paper["score"] = calculate_score(paper)
@@ -63,14 +63,14 @@ def score_papers(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def get_top_papers(papers: List[Dict[str, Any]], n: int = 3) -> List[Dict[str, Any]]:
     """
-    상위 N개 논문 선정
+    Select top N papers
     """
     scored = score_papers(papers)
     return scored[:n]
 
 def get_top_papers_by_field(papers: List[Dict[str, Any]], n_per_field: int = 1) -> List[Dict[str, Any]]:
     """
-    분야별 상위 N개 논문 선정
+    Select top N papers per field
     """
     # Group by field
     by_field = {}
@@ -91,7 +91,7 @@ def get_top_papers_by_field(papers: List[Dict[str, Any]], n_per_field: int = 1) 
 
 def update_paper_scores_in_db():
     """
-    DB에 저장된 논문들의 스코어 업데이트
+    Update scores for papers in DB
     """
     supabase = get_supabase_client()
     
@@ -111,7 +111,7 @@ def update_paper_scores_in_db():
 
 def main():
     """
-    테스트 실행
+    Test run
     """
     # Example paper
     test_paper = {
