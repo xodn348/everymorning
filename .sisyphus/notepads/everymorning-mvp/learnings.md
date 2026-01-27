@@ -170,3 +170,144 @@ The codebase is ready for user to:
 - Documentation is complete
 - Ready for production testing
 
+
+## 2026-01-27: README.md - Open Source Release Documentation
+
+### Implementation
+- Comprehensive README.md for GitHub open source release
+- 387 lines covering all aspects of setup, usage, and troubleshooting
+- Professional tone with clear structure and formatting
+
+### Content Structure
+1. **Header** - Project tagline and one-line description
+2. **Features** - 6 key features highlighting value proposition
+3. **Tech Stack** - Table format with all technologies and versions
+4. **Prerequisites** - 6 required accounts with links
+5. **Setup Guide** - 8-step detailed instructions:
+   - Clone repository
+   - Database setup (SQL schema included)
+   - Email delivery setup
+   - Telegram bot setup
+   - Groq API setup
+   - GitHub Secrets configuration
+   - Web app deployment (Vercel)
+   - Pipeline testing (manual + local)
+6. **Usage** - Automatic delivery, manual trigger, subscriber management
+7. **Project Structure** - Directory tree with descriptions
+8. **Cost Breakdown** - Table showing all free tiers ($0 total)
+9. **Testing** - Link to TESTING.md + quick test commands
+10. **Customization** - Delivery time, paper selection, templates
+11. **Troubleshooting** - Common issues and solutions
+12. **License** - MIT
+13. **Acknowledgments** - Credit to all services
+14. **Roadmap** - Future features
+15. **Contributing** - Simple guidelines
+
+### Key Features Highlighted
+- Automatic paper collection from Semantic Scholar
+- Smart scoring by citation velocity + influential citations
+- AI summaries via Groq Llama 3.1 70B (FREE)
+- Dual delivery (Email + Telegram)
+- Completely free ($0 cost)
+- Open source (MIT)
+
+### Setup Guide Highlights
+- Step-by-step instructions for all 6 external services
+- SQL schema for Supabase tables
+- GitHub Secrets configuration table
+- Manual workflow trigger instructions
+- Local testing commands
+- Telegram chat ID retrieval guide
+
+### Cost Breakdown Table
+| Service | Free Tier | Cost |
+|---------|-----------|------|
+| Semantic Scholar | 100k/day | $0 |
+| Groq | 30 req/min | $0 |
+| Resend | 3k/month | $0 |
+| Telegram | Unlimited | $0 |
+| Supabase | 500MB | $0 |
+| Vercel | Hobby | $0 |
+| GitHub Actions | 2k min/month | $0 |
+| **Total** | | **$0** |
+
+### Troubleshooting Section
+- No email received → Check spam, verify Resend key
+- Telegram not responding → Send /start, verify token
+- Workflow fails → Check logs, verify secrets
+- No papers fetched → Rate limit, check API status
+
+### Customization Examples
+- Change delivery time (cron expression)
+- Adjust paper fields (add/remove STEM fields)
+- Modify scoring weights (citation velocity vs influential)
+- Customize email/Telegram templates
+
+### Markdown Formatting
+- Headers (H1, H2, H3)
+- Tables (tech stack, cost breakdown, troubleshooting)
+- Code blocks (SQL, bash, Python, YAML)
+- Lists (ordered, unordered)
+- Links (external services, internal files)
+- Horizontal rules (section separators)
+- Blockquote (tagline)
+- Emoji (minimal, professional: 📚 ✨ 🛠️ 📋 🚀 📁 💰 🧪 🔧 🐛 📄 🙏 🚧 🤝 ❤️)
+
+### Links Included
+- Supabase: https://supabase.com
+- Resend: https://resend.com
+- Telegram BotFather: https://t.me/botfather
+- Groq: https://console.groq.com
+- Vercel: https://vercel.com
+- Crontab Guru: https://crontab.guru
+- API status pages (Semantic Scholar, Groq, Resend, Telegram, Supabase)
+- Internal: TESTING.md, LICENSE
+
+### Target Audience
+- Researchers
+- Grad students
+- STEM enthusiasts
+- Developers interested in open source projects
+
+### Tone
+- Professional but approachable
+- Clear and concise
+- Action-oriented (step-by-step)
+- Encouraging (emphasizes free tier, ease of setup)
+
+### Verification
+- ✅ 387 lines (comprehensive)
+- ✅ All sections present
+- ✅ Markdown formatting correct
+- ✅ Links valid
+- ✅ Code blocks properly formatted
+- ✅ Tables render correctly
+- ✅ Professional tone maintained
+- ✅ No excessive emojis (15 total, strategic placement)
+
+### Key Decisions
+- Included SQL schema directly in README (easier setup)
+- Linked to TESTING.md for detailed testing guide (avoid duplication)
+- Emphasized $0 cost throughout (key selling point)
+- Provided both manual and local testing options
+- Included troubleshooting for common issues
+- Added roadmap to show future direction
+- Kept contributing section simple (no complex guidelines)
+- No badges (clean, minimal design)
+- No changelog (not needed for MVP)
+
+### Gotchas
+- Must use absolute paths for internal links (e.g., `.sisyphus/notepads/...`)
+- Cron expression in UTC (7 AM KST = 22:00 UTC previous day)
+- Telegram chat ID retrieval requires manual API call
+- Supabase uses `anon` key, not `service_role` key
+- Resend defaults to `onboarding@resend.dev` for testing
+
+### Success Metrics
+- Clear value proposition (tagline + features)
+- Complete setup guide (no missing steps)
+- All prerequisites documented
+- Cost transparency ($0 total)
+- Troubleshooting coverage (common issues)
+- Professional presentation (GitHub-ready)
+

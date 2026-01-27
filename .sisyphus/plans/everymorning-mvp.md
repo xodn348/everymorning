@@ -752,7 +752,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ---
 
-- [ ] 12. README + 오픈소스 정리
+- [x] 12. README + 오픈소스 정리
 
   **What to do**:
   - README.md 업데이트:
