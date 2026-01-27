@@ -327,7 +327,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ### Wave 2: Core Features (Day 3-5)
 
-- [ ] 4. Next.js 랜딩페이지 + 구독 폼
+- [x] 4. Next.js 랜딩페이지 + 구독 폼
 
   **What to do**:
   - Next.js 15 App Router 프로젝트 생성
