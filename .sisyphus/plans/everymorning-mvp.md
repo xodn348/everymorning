@@ -550,7 +550,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ### Wave 3: Delivery Systems (Day 6-8)
 
-- [ ] 8. Email 발송 시스템 (Resend)
+- [x] 8. Email 발송 시스템 (Resend)
 
   **What to do**:
   - Resend 계정 생성 + API 키
@@ -599,7 +599,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ---
 
-- [ ] 9. Telegram 발송 시스템
+- [x] 9. Telegram 발송 시스템
 
   **What to do**:
   - `/subscribe` 명령 → chat_id를 Supabase에 저장
