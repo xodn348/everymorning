@@ -378,7 +378,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ---
 
-- [ ] 5. Python 논문 수집기 (Semantic Scholar API)
+- [x] 5. Python 논문 수집기 (Semantic Scholar API)
 
   **What to do**:
   - Semantic Scholar API 클라이언트 구현
