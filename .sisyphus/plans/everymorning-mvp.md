@@ -215,7 +215,7 @@ Critical Path: Task 1 → Task 5 → Task 7 → Task 8 → Task 10 → Task 11
 
 ---
 
-- [ ] 2. Supabase 프로젝트 생성 + DB 스키마
+- [x] 2. Supabase 프로젝트 생성 + DB 스키마
 
   **What to do**:
   - Supabase 프로젝트 생성 (supabase.com)
