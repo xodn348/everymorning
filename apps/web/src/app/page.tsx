@@ -157,25 +157,21 @@ export default function Home() {
           {[
             {
               title: 'Daily Digest',
-              description: 'Curated papers delivered every morning at 8 AM',
-              icon: '📬',
+              description: 'Curated papers delivered every morning at 7 AM CST',
             },
             {
               title: 'Multi-field',
               description: 'CS, Physics, Biology, and Mathematics coverage',
-              icon: '🔬',
             },
             {
               title: 'Open Source',
               description: 'Built in public, free forever',
-              icon: '💎',
             },
           ].map((feature, i) => (
             <div
               key={i}
               className="group p-6 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 hover:bg-zinc-900/50 transition-all duration-300"
             >
-              <div className="text-3xl mb-3">{feature.icon}</div>
               <h3 className="text-lg font-medium text-zinc-100 mb-2">{feature.title}</h3>
               <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
             </div>
@@ -189,7 +185,7 @@ export default function Home() {
               © 2026 everymorning · Built for researchers, by researchers
             </p>
             <a
-              href="https://github.com/yourusername/everymorning"
+              href="https://github.com/xodn348/everymorning"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-sm text-zinc-400 hover:text-cyan-400 transition-colors group"
