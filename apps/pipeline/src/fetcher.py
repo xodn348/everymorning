@@ -12,14 +12,16 @@ FIELD_MAPPING = {
     "cs": "Computer Science",
     "physics": "Physics",
     "bio": "Biology",
-    "math": "Mathematics"
+    "math": "Mathematics",
 }
 
 
-def fetch_papers_by_field(field: str, days: int = 7, limit: int = 50) -> List[Dict[str, Any]]:
+def fetch_papers_by_field(
+    field: str, days: int = 7, limit: int = 50, max_retries: int = 3
+) -> List[Dict[str, Any]]:
     """
     Fetch recent papers from Semantic Scholar API by field
-    Rate limit: 1 request per second
+    Rate limit: 1 request per second with exponential backoff on 429
     """
     url = f"{SEMANTIC_SCHOLAR_API}/paper/search"
 
@@ -38,11 +40,26 @@ def fetch_papers_by_field(field: str, days: int = 7, limit: int = 50) -> List[Di
     if api_key:
         headers["x-api-key"] = api_key
 
-    response = requests.get(url, params=params, headers=headers)
-    response.raise_for_status()
+    for attempt in range(max_retries):
+        # Rate limit: wait before request
+        time.sleep(1.5)
 
-    data = response.json()
-    return data.get("data", [])
+        response = requests.get(url, params=params, headers=headers)
+
+        if response.status_code == 429:
+            # Rate limited - exponential backoff
+            wait_time = (2**attempt) * 5  # 5s, 10s, 20s
+            print(f"Rate limited (429), waiting {wait_time}s before retry...")
+            time.sleep(wait_time)
+            continue
+
+        response.raise_for_status()
+        data = response.json()
+        return data.get("data", [])
+
+    # All retries exhausted - graceful degradation
+    print(f"Failed to fetch {field} papers after {max_retries} retries")
+    return []
 
 
 def fetch_all_fields(days: int = 7, limit_per_field: int = 50) -> List[Dict[str, Any]]:
@@ -85,8 +102,7 @@ def save_papers_to_db(papers: List[Dict[str, Any]]) -> int:
         # Upsert (중복이면 무시)
         try:
             supabase.table("papers").upsert(
-                paper_data,
-                on_conflict="source,external_id"
+                paper_data, on_conflict="source,external_id"
             ).execute()
             saved_count += 1
         except Exception as e:
