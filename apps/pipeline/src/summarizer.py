@@ -10,42 +10,27 @@ def get_groq_client() -> Groq:
 
 def summarize_paper(paper: Dict[str, Any]) -> str:
     """
-    Generate paper summary using Groq (Llama 3.1 70B)
-    
-    Output format:
-    🎯 TL;DR
-    {one sentence summary}
-    
-    💡 Why it matters
-    {why significant, 2 sentences}
-    
-    🔬 Key contribution
-    • {contribution 1}
-    • {contribution 2}
+    Generate a concise 1-2 sentence paper summary using Groq.
+    No emojis, no formatting - just plain text.
     """
     client = get_groq_client()
     
     title = paper.get("title", "Unknown")
     abstract = paper.get("abstract", "No abstract available")
     
-    prompt = f"""You are an academic paper summarizer for researchers.
-
-For this paper, provide a structured summary:
-
-1. TL;DR: One sentence summary (what did they do?)
-2. Why it matters: Why is this significant? (2 sentences max)
-3. Key contribution: Main technical contributions (2-3 bullet points)
-
-Be concise and technical. Target audience: grad students/researchers.
-Use emojis as section headers: 🎯 for TL;DR, 💡 for Why it matters, 🔬 for Key contribution.
+    prompt = f"""Summarize this paper in 1-2 sentences. Be concise and technical.
+Focus on: What did they do? Why does it matter?
+Target audience: researchers who want a quick morning read.
 
 Title: {title}
-Abstract: {abstract}"""
+Abstract: {abstract}
+
+Write only the summary, no headers or formatting."""
 
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=300,
+        max_tokens=100,
         temperature=0.3,
     )
     
@@ -78,7 +63,7 @@ def format_digest(papers: List[Dict[str, Any]]) -> str:
     """
     Format into digest for email/telegram
     """
-    lines = ["📚 everymorning - Daily STEM Paper Digest\n"]
+    lines = ["everymorning - Daily STEM Paper Digest\n"]
     lines.append("=" * 40 + "\n")
     
     for i, paper in enumerate(papers, 1):
@@ -86,11 +71,11 @@ def format_digest(papers: List[Dict[str, Any]]) -> str:
         url = paper.get("url", "")
         summary = paper.get("summary", "No summary")
         
-        lines.append(f"\n📄 Paper #{i}: {title}\n")
+        lines.append(f"\nPaper #{i}: {title}\n")
         lines.append("-" * 40)
         lines.append(f"\n{summary}\n")
         if url:
-            lines.append(f"\n🔗 Read paper → {url}\n")
+            lines.append(f"\nRead paper: {url}\n")
         lines.append("\n" + "=" * 40)
     
     return "\n".join(lines)

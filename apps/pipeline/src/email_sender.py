@@ -14,50 +14,70 @@ def get_resend_client():
 
 
 def format_email_html(papers: List[Dict[str, Any]]) -> str:
-    """Format papers into HTML email."""
-    email_html = """
-    <html>
-    <head>
-        <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f9fafb; }
-            .header { text-align: center; padding: 20px 0; }
-            .header h1 { color: #111827; margin: 0; }
-            .paper { background: white; border-radius: 8px; padding: 20px; margin: 16px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-            .paper h2 { color: #1f2937; margin: 0 0 12px 0; font-size: 18px; }
-            .summary { color: #374151; line-height: 1.6; white-space: pre-wrap; }
-            .link { display: inline-block; margin-top: 12px; color: #3b82f6; text-decoration: none; }
-            .footer { text-align: center; color: #6b7280; font-size: 12px; padding: 20px 0; }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h1>📚 everymorning</h1>
-            <p>Daily STEM Paper Digest</p>
-        </div>
-    """
+    """Format papers into minimal HTML email."""
     
-    for i, paper in enumerate(papers, 1):
+    papers_html = ""
+    for paper in papers:
         title = html.escape(paper.get("title", "Unknown"))
         summary = html.escape(paper.get("summary", "No summary available"))
-        url = paper.get("url", "")
+        url = paper.get("url", "#")
         
-        link_html = f"<a class='link' href='{url}'>Read paper →</a>" if url else ""
-        
-        email_html += f"""
-        <div class="paper">
-            <h2>#{i} {title}</h2>
-            <div class="summary">{summary}</div>
-            {link_html}
-        </div>
-        """
+        papers_html += f'''
+          <tr>
+            <td style="padding: 20px; background: #ffffff; border-radius: 8px;">
+              <a href="{url}" style="text-decoration: none;">
+                <h2 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #111827; line-height: 1.4;">
+                  {title}
+                </h2>
+              </a>
+              <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">
+                {summary}
+              </p>
+            </td>
+          </tr>
+          <tr><td style="height: 12px;"></td></tr>
+        '''
     
-    email_html += """
-        <div class="footer">
-            <p>You received this because you subscribed to everymorning.</p>
-        </div>
-    </body>
-    </html>
-    """
+    email_html = f'''<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+</head>
+<body style="margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="520" cellpadding="0" cellspacing="0" style="max-width: 520px; width: 100%;">
+          
+          <tr>
+            <td style="padding-bottom: 32px;">
+              <h1 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">
+                everymorning
+              </h1>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #6b7280;">
+                Daily STEM Paper Digest
+              </p>
+            </td>
+          </tr>
+          
+          {papers_html}
+          
+          <tr>
+            <td style="padding-top: 32px; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; font-size: 12px; color: #9ca3af; text-align: center;">
+                Unsubscribe
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>'''
     return email_html
 
 
@@ -80,7 +100,7 @@ def send_digest_email(
             result = resend.Emails.send({
                 "from": from_email,
                 "to": email,
-                "subject": "📚 everymorning - Today's Top STEM Papers",
+                "subject": "everymorning - Today's Top STEM Papers",
                 "html": html_content
             })
             results.append({"email": email, "status": "sent", "id": result.get("id")})
