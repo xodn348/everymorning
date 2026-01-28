@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Dict, Any
 
 from src.fetcher import fetch_all_fields
-from src.scorer import get_top_papers
+from src.scorer import get_top_papers_with_reasons
 from src.summarizer import summarize_papers
 from src.email_sender import send_digest_email
 from src.telegram_sender import send_telegram_digest
@@ -52,7 +52,7 @@ def main():
     
     try:
         log("Step 2: Scoring and selecting top 3 papers")
-        top_papers = get_top_papers(papers, n=3)
+        top_papers = get_top_papers_with_reasons(papers, n=3)
         log(f"Selected {len(top_papers)} top papers")
     except Exception as e:
         log(f"Error scoring papers: {e}")

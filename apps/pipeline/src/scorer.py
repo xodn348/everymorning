@@ -126,3 +126,65 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def generate_selection_reason(paper: Dict[str, Any]) -> str:
+    """
+    Generate a human-readable reason why this paper was selected.
+    Based on the scoring factors.
+    """
+    citations = paper.get("citationCount", 0) or 0
+    influential = paper.get("influentialCitationCount", 0) or 0
+    pub_date = paper.get("publicationDate") or paper.get("published_at")
+    
+    # Calculate metrics
+    if pub_date:
+        if isinstance(pub_date, str):
+            try:
+                pub_date = datetime.fromisoformat(pub_date.replace("Z", "+00:00"))
+            except:
+                pub_date = datetime.now()
+        days_since_pub = max(1, (datetime.now() - pub_date.replace(tzinfo=None)).days)
+    else:
+        days_since_pub = 30
+    
+    # Determine primary reason
+    reasons = []
+    
+    # High citation velocity
+    if citations > 0 and days_since_pub < 60:
+        velocity = citations / (days_since_pub / 30)
+        if velocity > 5:
+            reasons.append(f"{citations} citations in {days_since_pub} days")
+    
+    # High influential ratio
+    if influential > 0 and citations > 0:
+        ratio = influential / citations
+        if ratio > 0.3:
+            reasons.append(f"{influential} influential citations")
+    
+    # Very recent
+    if days_since_pub <= 7:
+        reasons.append("published this week")
+    elif days_since_pub <= 14:
+        reasons.append("published in last 2 weeks")
+    
+    # High overall citations
+    if citations >= 50:
+        reasons.append(f"{citations} total citations")
+    
+    # Build final reason
+    if reasons:
+        return "Selected for: " + ", ".join(reasons[:2])
+    else:
+        return "Selected for: emerging research with growing interest"
+
+
+def get_top_papers_with_reasons(papers: List[Dict[str, Any]], n: int = 3) -> List[Dict[str, Any]]:
+    """
+    Select top N papers and add selection reasons.
+    """
+    top = get_top_papers(papers, n)
+    for paper in top:
+        paper["selection_reason"] = generate_selection_reason(paper)
+    return top

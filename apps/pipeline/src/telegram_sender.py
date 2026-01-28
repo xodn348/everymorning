@@ -30,8 +30,12 @@ def format_digest_text(papers: List[Dict[str, Any]]) -> str:
         title = html.escape(paper.get("title", "Unknown"))
         summary = html.escape(paper.get("summary", "No summary available"))
         url = html.escape(paper.get("url", ""))
+        selection_reason = html.escape(paper.get("selection_reason", ""))
         
-        text += f"<b>#{i} {title}</b>\n\n"
+        text += f"<b>#{i} {title}</b>\n"
+        if selection_reason:
+            text += f"<i>{selection_reason}</i>\n"
+        text += "\n"
         text += f"{summary}\n\n"
         
         if url:

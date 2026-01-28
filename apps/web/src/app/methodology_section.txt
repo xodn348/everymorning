@@ -1,0 +1,28 @@
+        {/* How We Select Papers */}
+        <section className="mb-32">
+          <h2 className="text-2xl font-light text-zinc-100 mb-8">How We Select Papers</h2>
+          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
+            <p className="text-zinc-400 mb-6">
+              Every morning, we analyze hundreds of papers from Semantic Scholar and rank them using a weighted scoring algorithm:
+            </p>
+            <div className="grid md:grid-cols-2 gap-6">
+              {[
+                { weight: '35%', title: 'Citation Velocity', desc: 'How fast the paper is being cited relative to its age' },
+                { weight: '25%', title: 'Influential Citations', desc: 'Citations from other highly-cited papers' },
+                { weight: '20%', title: 'Recency', desc: 'Newer papers get a boost to surface fresh research' },
+                { weight: '20%', title: 'Field Diversity', desc: 'Balanced coverage across CS, Physics, Bio, and Math' },
+              ].map((factor, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="text-cyan-400 font-mono text-sm w-12 shrink-0">{factor.weight}</div>
+                  <div>
+                    <div className="text-zinc-200 font-medium">{factor.title}</div>
+                    <div className="text-zinc-500 text-sm">{factor.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-zinc-500 text-sm mt-6 pt-6 border-t border-zinc-800">
+              Each paper in your digest includes a selection reason explaining why it stood out.
+            </p>
+          </div>
+        </section>

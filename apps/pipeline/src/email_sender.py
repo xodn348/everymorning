@@ -30,6 +30,7 @@ def format_email_html(papers: List[Dict[str, Any]]) -> str:
     for paper in papers:
         title = html.escape(paper.get("title", "Unknown"))
         summary = html.escape(paper.get("summary", "No summary available"))
+        selection_reason = html.escape(paper.get("selection_reason", ""))
         # Escape URL to prevent injection
         raw_url = paper.get("url", "#")
         url = html.escape(raw_url) if raw_url else "#"
@@ -42,6 +43,9 @@ def format_email_html(papers: List[Dict[str, Any]]) -> str:
                   {title}
                 </h2>
               </a>
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #0891b2; font-weight: 500;">
+                  {selection_reason}
+                </p>
               <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">
                 {summary}
               </p>
