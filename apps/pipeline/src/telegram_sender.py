@@ -1,4 +1,5 @@
 import os
+import html
 import asyncio
 from typing import List, Dict, Any
 from telegram import Bot
@@ -13,22 +14,29 @@ def get_bot() -> Bot:
     return Bot(token=token)
 
 
+def mask_id(chat_id: str) -> str:
+    """Mask chat_id for logging (show first 3 and last 2 digits)."""
+    if len(chat_id) > 5:
+        return f"{chat_id[:3]}***{chat_id[-2:]}"
+    return "***"
+
+
 def format_digest_text(papers: List[Dict[str, Any]]) -> str:
-    """Format papers into HTML text for Telegram."""
-    text = "<b>📚 everymorning - Daily STEM Paper Digest</b>\n\n"
+    """Format papers into HTML text for Telegram (with proper escaping)."""
+    text = "<b>everymorning - Daily STEM Paper Digest</b>\n\n"
     
     for i, paper in enumerate(papers, 1):
-        title = paper.get("title", "Unknown")
-        summary = paper.get("summary", "No summary available")
-        url = paper.get("url", "")
+        # HTML escape to prevent injection
+        title = html.escape(paper.get("title", "Unknown"))
+        summary = html.escape(paper.get("summary", "No summary available"))
+        url = html.escape(paper.get("url", ""))
         
         text += f"<b>#{i} {title}</b>\n\n"
         text += f"{summary}\n\n"
         
         if url:
-            text += f"<a href='{url}'>Read paper →</a>\n\n"
+            text += f"<a href='{url}'>Read paper</a>\n\n"
         
-        # Add separator between papers (except after last one)
         if i < len(papers):
             text += "---\n\n"
     
@@ -45,6 +53,7 @@ async def send_telegram_digest_async(
     
     results = []
     for chat_id in chat_ids:
+        masked_id = mask_id(chat_id)
         try:
             message = await bot.send_message(
                 chat_id=chat_id,
@@ -56,21 +65,21 @@ async def send_telegram_digest_async(
                 "status": "sent", 
                 "message_id": message.message_id
             })
-            print(f"Message sent to {chat_id}")
+            print(f"Message sent to {masked_id}")
         except TelegramError as e:
             results.append({
                 "chat_id": chat_id, 
                 "status": "failed", 
-                "error": str(e)
+                "error": "Telegram error"
             })
-            print(f"Failed to send to {chat_id}: {e}")
+            print(f"Failed to send to {masked_id}")
         except Exception as e:
             results.append({
                 "chat_id": chat_id, 
                 "status": "failed", 
-                "error": str(e)
+                "error": "Send error"
             })
-            print(f"Unexpected error for {chat_id}: {e}")
+            print(f"Unexpected error for {masked_id}")
     
     return {
         "results": results,
@@ -94,11 +103,6 @@ def main():
             "title": "Test Paper 1: Machine Learning Advances",
             "summary": "This paper explores novel approaches to deep learning optimization.",
             "url": "https://example.com/paper1"
-        },
-        {
-            "title": "Test Paper 2: Quantum Computing Breakthrough",
-            "summary": "Researchers demonstrate quantum supremacy in practical applications.",
-            "url": "https://example.com/paper2"
         }
     ]
     
@@ -107,7 +111,6 @@ def main():
     print("=" * 60)
     print(text)
     print("=" * 60)
-    print(f"Length: {len(text)} characters")
 
 
 if __name__ == "__main__":

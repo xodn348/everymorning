@@ -2,11 +2,26 @@ import os
 from typing import List, Dict, Any
 from groq import Groq
 
+# Input length limits to prevent prompt injection
+MAX_TITLE_LENGTH = 300
+MAX_ABSTRACT_LENGTH = 3000
+
+
 def get_groq_client() -> Groq:
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key:
         raise ValueError("GROQ_API_KEY must be set")
     return Groq(api_key=api_key)
+
+
+def sanitize_input(text: str, max_length: int) -> str:
+    """Sanitize and truncate input text."""
+    if not text:
+        return ""
+    # Remove potential control characters and truncate
+    cleaned = "".join(char for char in text if char.isprintable() or char in "\n\t")
+    return cleaned[:max_length]
+
 
 def summarize_paper(paper: Dict[str, Any]) -> str:
     """
@@ -15,8 +30,9 @@ def summarize_paper(paper: Dict[str, Any]) -> str:
     """
     client = get_groq_client()
     
-    title = paper.get("title", "Unknown")
-    abstract = paper.get("abstract", "No abstract available")
+    # Sanitize inputs to prevent prompt injection
+    title = sanitize_input(paper.get("title", "Unknown"), MAX_TITLE_LENGTH)
+    abstract = sanitize_input(paper.get("abstract", "No abstract available"), MAX_ABSTRACT_LENGTH)
     
     prompt = f"""Summarize this paper in 1-2 sentences. Be concise and technical.
 Focus on: What did they do? Why does it matter?
@@ -36,6 +52,7 @@ Write only the summary, no headers or formatting."""
     
     return response.choices[0].message.content
 
+
 def summarize_papers(papers: List[Dict[str, Any]], max_papers: int = 3) -> List[Dict[str, Any]]:
     """
     Summarize multiple papers (default: top 3)
@@ -49,15 +66,18 @@ def summarize_papers(papers: List[Dict[str, Any]], max_papers: int = 3) -> List[
                 **paper,
                 "summary": summary
             })
-            print(f"Summarized: {paper.get('title', 'Unknown')[:50]}...")
+            # Don't log full title for privacy
+            print(f"Summarized paper {len(summaries)}/{max_papers}")
         except Exception as e:
-            print(f"Error summarizing paper: {e}")
+            # Don't expose error details in output
+            print(f"Error summarizing paper {len(summaries)+1}")
             summaries.append({
                 **paper,
-                "summary": f"Summary unavailable: {str(e)}"
+                "summary": "Summary temporarily unavailable"
             })
     
     return summaries
+
 
 def format_digest(papers: List[Dict[str, Any]]) -> str:
     """
@@ -80,19 +100,19 @@ def format_digest(papers: List[Dict[str, Any]]) -> str:
     
     return "\n".join(lines)
 
+
 def main():
-    """
-    Test run
-    """
+    """Test run"""
     test_paper = {
         "title": "Scaling Test-Time Compute Optimally",
-        "abstract": "We study how to optimally scale test-time compute in language models. We find that allowing models to 'think longer' by generating more tokens before answering can significantly improve performance. Our process reward model approach achieves 14x better compute efficiency compared to simply using larger models.",
+        "abstract": "We study how to optimally scale test-time compute in language models.",
         "url": "https://arxiv.org/abs/example"
     }
     
     print("Testing summarizer...")
     summary = summarize_paper(test_paper)
     print(summary)
+
 
 if __name__ == "__main__":
     main()

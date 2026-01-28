@@ -1,6 +1,7 @@
 import os
 import html
 from typing import List, Dict, Any
+from urllib.parse import quote
 import resend
 
 
@@ -13,14 +14,25 @@ def get_resend_client():
     return resend
 
 
+def mask_email(email: str) -> str:
+    """Mask email for logging (show first 3 chars and domain)."""
+    if "@" in email:
+        local, domain = email.split("@", 1)
+        masked_local = local[:3] + "***" if len(local) > 3 else "***"
+        return f"{masked_local}@{domain}"
+    return "***"
+
+
 def format_email_html(papers: List[Dict[str, Any]]) -> str:
-    """Format papers into minimal HTML email."""
+    """Format papers into minimal HTML email with proper escaping."""
     
     papers_html = ""
     for paper in papers:
         title = html.escape(paper.get("title", "Unknown"))
         summary = html.escape(paper.get("summary", "No summary available"))
-        url = paper.get("url", "#")
+        # Escape URL to prevent injection
+        raw_url = paper.get("url", "#")
+        url = html.escape(raw_url) if raw_url else "#"
         
         papers_html += f'''
           <tr>
@@ -96,6 +108,7 @@ def send_digest_email(
     
     results = []
     for email in to_emails:
+        masked = mask_email(email)
         try:
             result = resend.Emails.send({
                 "from": from_email,
@@ -104,10 +117,10 @@ def send_digest_email(
                 "html": html_content
             })
             results.append({"email": email, "status": "sent", "id": result.get("id")})
-            print(f"Email sent to {email}")
+            print(f"Email sent to {masked}")
         except Exception as e:
-            results.append({"email": email, "status": "failed", "error": str(e)})
-            print(f"Failed to send to {email}: {e}")
+            results.append({"email": email, "status": "failed", "error": "Send error"})
+            print(f"Failed to send to {masked}")
     
     return {
         "results": results, 
