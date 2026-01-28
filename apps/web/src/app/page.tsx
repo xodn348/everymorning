@@ -152,60 +152,60 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Features */}
-        <section className="grid md:grid-cols-3 gap-8 mb-32">
-          {[
-            {
-              title: 'Daily Digest',
-              description: 'Curated papers delivered every morning at 7 AM CST',
-            },
-            {
-              title: 'Multi-field',
-              description: 'CS, Physics, Biology, and Mathematics coverage',
-            },
-            {
-              title: 'Open Source',
-              description: 'Built in public, free forever',
-            },
-          ].map((feature, i) => (
-            <div
-              key={i}
-              className="group p-6 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 hover:bg-zinc-900/50 transition-all duration-300"
-            >
-              <h3 className="text-lg font-medium text-zinc-100 mb-2">{feature.title}</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
-            </div>
-          ))}
-        </section>
+         {/* How We Select Papers */}
+         <section className="mb-32">
+           <h2 className="text-2xl font-light text-zinc-100 mb-8">How We Select Papers</h2>
+           <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
+             <p className="text-zinc-400 mb-6">
+               Every morning, we analyze hundreds of papers from Semantic Scholar and rank them using a weighted scoring algorithm:
+             </p>
+             <div className="grid md:grid-cols-2 gap-6">
+               {[
+                 { weight: '35%', title: 'Citation Velocity', desc: 'How fast the paper is being cited relative to its age' },
+                 { weight: '25%', title: 'Influential Citations', desc: 'Citations from other highly-cited papers' },
+                 { weight: '20%', title: 'Recency', desc: 'Newer papers get a boost to surface fresh research' },
+                 { weight: '20%', title: 'Field Diversity', desc: 'Balanced coverage across CS, Physics, Bio, and Math' },
+               ].map((factor, i) => (
+                 <div key={i} className="flex gap-4">
+                   <div className="text-cyan-400 font-mono text-sm w-12 shrink-0">{factor.weight}</div>
+                   <div>
+                     <div className="text-zinc-200 font-medium">{factor.title}</div>
+                     <div className="text-zinc-500 text-sm">{factor.desc}</div>
+                   </div>
+                 </div>
+               ))}
+             </div>
+             <p className="text-zinc-500 text-sm mt-6 pt-6 border-t border-zinc-800">
+               Each paper in your digest includes a selection reason explaining why it stood out.
+             </p>
+           </div>
+         </section>
 
-        {/* How We Select Papers */}
-        <section className="mb-32">
-          <h2 className="text-2xl font-light text-zinc-100 mb-8">How We Select Papers</h2>
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-            <p className="text-zinc-400 mb-6">
-              Every morning, we analyze hundreds of papers from Semantic Scholar and rank them using a weighted scoring algorithm:
-            </p>
-            <div className="grid md:grid-cols-2 gap-6">
-              {[
-                { weight: '35%', title: 'Citation Velocity', desc: 'How fast the paper is being cited relative to its age' },
-                { weight: '25%', title: 'Influential Citations', desc: 'Citations from other highly-cited papers' },
-                { weight: '20%', title: 'Recency', desc: 'Newer papers get a boost to surface fresh research' },
-                { weight: '20%', title: 'Field Diversity', desc: 'Balanced coverage across CS, Physics, Bio, and Math' },
-              ].map((factor, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className="text-cyan-400 font-mono text-sm w-12 shrink-0">{factor.weight}</div>
-                  <div>
-                    <div className="text-zinc-200 font-medium">{factor.title}</div>
-                    <div className="text-zinc-500 text-sm">{factor.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-zinc-500 text-sm mt-6 pt-6 border-t border-zinc-800">
-              Each paper in your digest includes a selection reason explaining why it stood out.
-            </p>
-          </div>
-        </section>
+         {/* Features */}
+         <section className="grid md:grid-cols-3 gap-8 mb-32">
+           {[
+             {
+               title: 'Daily Digest',
+               description: 'Curated papers delivered every morning at 7 AM CST',
+             },
+             {
+               title: 'Multi-field',
+               description: 'CS, Physics, Biology, and Mathematics coverage',
+             },
+             {
+               title: 'Open Source',
+               description: 'Built in public, free forever',
+             },
+           ].map((feature, i) => (
+             <div
+               key={i}
+               className="group p-6 rounded-lg border border-zinc-800 hover:border-zinc-700 bg-zinc-900/30 hover:bg-zinc-900/50 transition-all duration-300"
+             >
+               <h3 className="text-lg font-medium text-zinc-100 mb-2">{feature.title}</h3>
+               <p className="text-sm text-zinc-400 leading-relaxed">{feature.description}</p>
+             </div>
+           ))}
+         </section>
 
         {/* Footer */}
         <footer className="pt-12 border-t border-zinc-800">
