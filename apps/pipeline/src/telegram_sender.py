@@ -14,21 +14,18 @@ FIELD_MAPPING = {
 }
 
 
-def generate_ai_prompt(title: str, field: str, summary: str) -> str:
-    truncated_title = title[:120] if len(title) > 120 else title
+def generate_ai_prompt(title: str, field: str, summary: str, url: str = "") -> str:
+    truncated_title = title[:100] if len(title) > 100 else title
     field_name = FIELD_MAPPING.get(field, field)
+    truncated_summary = summary[:200] if len(summary) > 200 else summary
 
-    prompt = f"""I'd like your help analyzing this research paper.
+    url_part = f" ({url})" if url else ""
 
-Title: {truncated_title}
+    prompt = f"""Paper: {truncated_title}{url_part}
 Field: {field_name}
-Summary: {summary}
+Summary: {truncated_summary}
 
-Please:
-1. Summarize the key contributions and methodology
-2. Identify how this connects to my research in [YOUR RESEARCH TOPIC]
-3. Suggest 2-3 novel research directions combining these ideas
-4. Note any limitations or open questions worth exploring"""
+Analyze key findings, how they connect to my research in [YOUR TOPIC], and suggest novel research directions."""
 
     return prompt
 
@@ -53,7 +50,15 @@ def format_digest_text(papers: List[Dict[str, Any]]) -> str:
 
     for i, paper in enumerate(papers, 1):
         title = html.escape(paper.get("title", "Unknown"))
-        summary = html.escape(paper.get("summary", "No summary available"))
+        raw_summary = paper.get("summary", "No summary available")
+
+        summary_lines = []
+        for line in raw_summary.split("\n"):
+            line = line.strip()
+            if line:
+                summary_lines.append(html.escape(line))
+        summary = "\n".join(summary_lines)
+
         url = html.escape(paper.get("url", ""))
         selection_reason = html.escape(paper.get("selection_reason", ""))
         field = paper.get("field", "")
@@ -68,7 +73,10 @@ def format_digest_text(papers: List[Dict[str, Any]]) -> str:
             text += f"<a href='{url}'>Read paper</a>\n"
 
         ai_prompt = generate_ai_prompt(
-            paper.get("title", ""), field, paper.get("summary", "")
+            paper.get("title", ""),
+            field,
+            paper.get("summary", ""),
+            paper.get("url", ""),
         )
         escaped_prompt = html.escape(ai_prompt)
         text += f"\n<pre>{escaped_prompt}</pre>\n\n"
