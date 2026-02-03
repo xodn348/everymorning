@@ -25,57 +25,63 @@ def sanitize_input(text: str, max_length: int) -> str:
 
 def summarize_paper(paper: Dict[str, Any]) -> str:
     """
-    Generate a concise 1-2 sentence paper summary using Groq.
-    No emojis, no formatting - just plain text.
+    Generate a concise 3-point bullet summary using Groq.
+    Returns bullet points for better readability.
     """
     client = get_groq_client()
-    
+
     # Sanitize inputs to prevent prompt injection
     title = sanitize_input(paper.get("title", "Unknown"), MAX_TITLE_LENGTH)
-    abstract = sanitize_input(paper.get("abstract", "No abstract available"), MAX_ABSTRACT_LENGTH)
-    
-    prompt = f"""Summarize this paper in 1-2 sentences. Be concise and technical.
-Focus on: What did they do? Why does it matter?
-Target audience: researchers who want a quick morning read.
+    abstract = sanitize_input(
+        paper.get("abstract", "No abstract available"), MAX_ABSTRACT_LENGTH
+    )
+
+    prompt = f"""Summarize this paper in exactly 3 short bullet points.
+Each point should be ONE sentence maximum.
+Use this format:
+• [What they did/key method]
+• [Main finding/result]
+• [Why it matters/impact]
+
+Target audience: researchers scanning papers over morning coffee.
 
 Title: {title}
 Abstract: {abstract}
 
-Write only the summary, no headers or formatting."""
+Write ONLY the 3 bullet points, nothing else."""
 
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=100,
+        max_tokens=150,
         temperature=0.3,
     )
-    
-    return response.choices[0].message.content
+
+    return (
+        response.choices[0].message.content
+        or "• Summary unavailable\n• Please check paper directly\n• Error generating summary"
+    )
 
 
-def summarize_papers(papers: List[Dict[str, Any]], max_papers: int = 3) -> List[Dict[str, Any]]:
+def summarize_papers(
+    papers: List[Dict[str, Any]], max_papers: int = 3
+) -> List[Dict[str, Any]]:
     """
     Summarize multiple papers (default: top 3)
     """
     summaries = []
-    
+
     for paper in papers[:max_papers]:
         try:
             summary = summarize_paper(paper)
-            summaries.append({
-                **paper,
-                "summary": summary
-            })
+            summaries.append({**paper, "summary": summary})
             # Don't log full title for privacy
             print(f"Summarized paper {len(summaries)}/{max_papers}")
         except Exception as e:
             # Don't expose error details in output
-            print(f"Error summarizing paper {len(summaries)+1}")
-            summaries.append({
-                **paper,
-                "summary": "Summary temporarily unavailable"
-            })
-    
+            print(f"Error summarizing paper {len(summaries) + 1}")
+            summaries.append({**paper, "summary": "Summary temporarily unavailable"})
+
     return summaries
 
 
@@ -85,19 +91,19 @@ def format_digest(papers: List[Dict[str, Any]]) -> str:
     """
     lines = ["everymorning - Daily STEM Paper Digest\n"]
     lines.append("=" * 40 + "\n")
-    
+
     for i, paper in enumerate(papers, 1):
         title = paper.get("title", "Unknown")
         url = paper.get("url", "")
         summary = paper.get("summary", "No summary")
-        
+
         lines.append(f"\nPaper #{i}: {title}\n")
         lines.append("-" * 40)
         lines.append(f"\n{summary}\n")
         if url:
             lines.append(f"\nRead paper: {url}\n")
         lines.append("\n" + "=" * 40)
-    
+
     return "\n".join(lines)
 
 
@@ -106,9 +112,9 @@ def main():
     test_paper = {
         "title": "Scaling Test-Time Compute Optimally",
         "abstract": "We study how to optimally scale test-time compute in language models.",
-        "url": "https://arxiv.org/abs/example"
+        "url": "https://arxiv.org/abs/example",
     }
-    
+
     print("Testing summarizer...")
     summary = summarize_paper(test_paper)
     print(summary)
