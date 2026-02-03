@@ -45,7 +45,7 @@ export default function Home() {
         <section className="grid md:grid-cols-[1.2fr,1fr] gap-12 md:gap-20 mb-32">
           <div>
             <h2 className="text-3xl md:text-5xl font-light leading-tight mb-8 text-zinc-100">
-              Daily STEM paper digest<br />
+              Daily fresh stem paper<br />
               <span className="text-cyan-400">delivered to your inbox</span>
             </h2>
             <p className="text-lg text-zinc-400 leading-relaxed max-w-xl">
