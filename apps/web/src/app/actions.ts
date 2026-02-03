@@ -32,3 +32,26 @@ export async function subscribe(formData: FormData) {
   
   return { success: true }
 }
+
+export async function unsubscribe(email: string) {
+  if (!email || !email.includes('@')) {
+    return { error: 'Invalid email address' }
+  }
+  
+  const supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_ANON_KEY!
+  )
+  
+  const { error } = await supabase
+    .from('subscribers')
+    .update({ is_active: false })
+    .eq('email', email)
+  
+  if (error) {
+    console.error('Unsubscribe error:', error)
+    return { error: 'Something went wrong' }
+  }
+  
+  return { success: true }
+}
