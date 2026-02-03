@@ -6,6 +6,33 @@ from telegram import Bot
 from telegram.error import TelegramError
 
 
+FIELD_MAPPING = {
+    "cs": "Computer Science",
+    "physics": "Physics",
+    "bio": "Biology",
+    "math": "Mathematics",
+}
+
+
+def generate_ai_prompt(title: str, field: str, summary: str) -> str:
+    truncated_title = title[:120] if len(title) > 120 else title
+    field_name = FIELD_MAPPING.get(field, field)
+
+    prompt = f"""I'd like your help analyzing this research paper.
+
+Title: {truncated_title}
+Field: {field_name}
+Summary: {summary}
+
+Please:
+1. Summarize the key contributions and methodology
+2. Identify how this connects to my research in [YOUR RESEARCH TOPIC]
+3. Suggest 2-3 novel research directions combining these ideas
+4. Note any limitations or open questions worth exploring"""
+
+    return prompt
+
+
 def get_bot() -> Bot:
     """Initialize Telegram Bot."""
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -22,99 +49,96 @@ def mask_id(chat_id: str) -> str:
 
 
 def format_digest_text(papers: List[Dict[str, Any]]) -> str:
-    """Format papers into HTML text for Telegram (with proper escaping)."""
     text = "<b>everymorning - Daily STEM Paper Digest</b>\n\n"
-    
+
     for i, paper in enumerate(papers, 1):
-        # HTML escape to prevent injection
         title = html.escape(paper.get("title", "Unknown"))
         summary = html.escape(paper.get("summary", "No summary available"))
         url = html.escape(paper.get("url", ""))
         selection_reason = html.escape(paper.get("selection_reason", ""))
-        
+        field = paper.get("field", "")
+
         text += f"<b>#{i} {title}</b>\n"
         if selection_reason:
             text += f"<i>{selection_reason}</i>\n"
         text += "\n"
         text += f"{summary}\n\n"
-        
+
         if url:
-            text += f"<a href='{url}'>Read paper</a>\n\n"
-        
+            text += f"<a href='{url}'>Read paper</a>\n"
+
+        ai_prompt = generate_ai_prompt(
+            paper.get("title", ""), field, paper.get("summary", "")
+        )
+        escaped_prompt = html.escape(ai_prompt)
+        text += f"\n<pre>{escaped_prompt}</pre>\n\n"
+
         if i < len(papers):
             text += "---\n\n"
-    
+
     return text
 
 
 async def send_telegram_digest_async(
-    chat_ids: List[str], 
-    papers: List[Dict[str, Any]]
+    chat_ids: List[str], papers: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """Send digest to Telegram subscribers (async version)."""
     bot = get_bot()
     text = format_digest_text(papers)
-    
+
     results = []
     for chat_id in chat_ids:
         masked_id = mask_id(chat_id)
         try:
             message = await bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                parse_mode="HTML"
+                chat_id=chat_id, text=text, parse_mode="HTML"
             )
-            results.append({
-                "chat_id": chat_id, 
-                "status": "sent", 
-                "message_id": message.message_id
-            })
+            results.append(
+                {"chat_id": chat_id, "status": "sent", "message_id": message.message_id}
+            )
             print(f"Message sent to {masked_id}")
         except TelegramError as e:
-            results.append({
-                "chat_id": chat_id, 
-                "status": "failed", 
-                "error": "Telegram error"
-            })
+            results.append(
+                {"chat_id": chat_id, "status": "failed", "error": "Telegram error"}
+            )
             print(f"Failed to send to {masked_id}")
         except Exception as e:
-            results.append({
-                "chat_id": chat_id, 
-                "status": "failed", 
-                "error": "Send error"
-            })
+            results.append(
+                {"chat_id": chat_id, "status": "failed", "error": "Send error"}
+            )
             print(f"Unexpected error for {masked_id}")
-    
+
     return {
         "results": results,
         "total": len(chat_ids),
-        "sent": sum(1 for r in results if r["status"] == "sent")
+        "sent": sum(1 for r in results if r["status"] == "sent"),
     }
 
 
 def send_telegram_digest(
-    chat_ids: List[str], 
-    papers: List[Dict[str, Any]]
+    chat_ids: List[str], papers: List[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """Send digest to Telegram subscribers (sync wrapper)."""
     return asyncio.run(send_telegram_digest_async(chat_ids, papers))
 
 
 def main():
-    """Test run - generates text preview."""
     test_papers = [
         {
             "title": "Test Paper 1: Machine Learning Advances",
             "summary": "This paper explores novel approaches to deep learning optimization.",
-            "url": "https://example.com/paper1"
+            "url": "https://example.com/paper1",
+            "field": "cs",
+            "selection_reason": "Relevant to your interests",
         }
     ]
-    
+
     text = format_digest_text(test_papers)
     print("Telegram Digest Preview:")
     print("=" * 60)
     print(text)
     print("=" * 60)
+    print(f"Message length: {len(text)} characters")
 
 
 if __name__ == "__main__":

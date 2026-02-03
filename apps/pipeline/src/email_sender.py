@@ -1,8 +1,35 @@
 import os
 import html
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from urllib.parse import quote
 import resend
+
+
+FIELD_MAPPING = {
+    "cs": "Computer Science",
+    "physics": "Physics",
+    "bio": "Biology",
+    "math": "Mathematics",
+}
+
+
+def generate_ai_prompt(title: str, field: str, summary: str) -> str:
+    truncated_title = title[:120] if len(title) > 120 else title
+    field_name = FIELD_MAPPING.get(field, field)
+
+    prompt = f"""I'd like your help analyzing this research paper.
+
+Title: {truncated_title}
+Field: {field_name}
+Summary: {summary}
+
+Please:
+1. Summarize the key contributions and methodology
+2. Identify how this connects to my research in [YOUR RESEARCH TOPIC]
+3. Suggest 2-3 novel research directions combining these ideas
+4. Note any limitations or open questions worth exploring"""
+
+    return prompt
 
 
 def get_resend_client():
@@ -23,17 +50,22 @@ def mask_email(email: str) -> str:
     return "***"
 
 
-def format_email_html(papers: List[Dict[str, Any]]) -> str:
-    """Format papers into minimal HTML email with proper escaping."""
-
+def format_email_html(
+    papers: List[Dict[str, Any]], recipient_email: Optional[str] = None
+) -> str:
     papers_html = ""
     for paper in papers:
         title = html.escape(paper.get("title", "Unknown"))
         summary = html.escape(paper.get("summary", "No summary available"))
         selection_reason = html.escape(paper.get("selection_reason", ""))
-        # Escape URL to prevent injection
         raw_url = paper.get("url", "#")
         url = html.escape(raw_url) if raw_url else "#"
+        field = paper.get("field", "")
+
+        ai_prompt = generate_ai_prompt(
+            paper.get("title", ""), field, paper.get("summary", "")
+        )
+        escaped_prompt = html.escape(ai_prompt)
 
         papers_html += f'''
           <tr>
@@ -49,10 +81,21 @@ def format_email_html(papers: List[Dict[str, Any]]) -> str:
               <p style="margin: 0; font-size: 14px; color: #4b5563; line-height: 1.5;">
                 {summary}
               </p>
+              <p style="margin: 12px 0 8px 0; font-size: 11px; color: #6b7280;">
+                AI Prompt
+              </p>
+              <pre style="margin: 0; background: #f3f4f6; padding: 12px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px; color: #374151; white-space: pre-wrap; word-wrap: break-word; overflow-x: auto;">{escaped_prompt}</pre>
             </td>
           </tr>
           <tr><td style="height: 12px;"></td></tr>
         '''
+
+    unsubscribe_link = ""
+    if recipient_email:
+        encoded_email = quote(recipient_email)
+        unsubscribe_link = f'<a href="https://stemem.info/unsubscribe?email={encoded_email}" style="color: #0891b2; text-decoration: none;">Unsubscribe</a>'
+    else:
+        unsubscribe_link = "Unsubscribe"
 
     email_html = f"""<!DOCTYPE html>
 <html>
@@ -83,7 +126,7 @@ def format_email_html(papers: List[Dict[str, Any]]) -> str:
           <tr>
             <td style="padding-top: 32px; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; font-size: 12px; color: #9ca3af; text-align: center;">
-                Unsubscribe
+                {unsubscribe_link}
               </p>
             </td>
           </tr>
@@ -98,7 +141,10 @@ def format_email_html(papers: List[Dict[str, Any]]) -> str:
 
 
 def send_digest_email(
-    to_emails: List[str], papers: List[Dict[str, Any]], from_email: str = None
+    to_emails: List[str],
+    papers: List[Dict[str, Any]],
+    from_email: Optional[str] = None,
+    recipient_email: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Send digest email to subscribers."""
     get_resend_client()
@@ -108,11 +154,10 @@ def send_digest_email(
             "RESEND_FROM_EMAIL", "everymorning <fresh@stemem.info>"
         )
 
-    html_content = format_email_html(papers)
-
     results = []
     for email in to_emails:
         masked = mask_email(email)
+        html_content = format_email_html(papers, recipient_email=email)
         try:
             result = resend.Emails.send(
                 {
@@ -136,16 +181,17 @@ def send_digest_email(
 
 
 def main():
-    """Test run - generates HTML preview."""
     test_papers = [
         {
             "title": "Test Paper",
             "summary": "Test summary content",
             "url": "https://example.com",
+            "field": "cs",
+            "selection_reason": "Relevant to your interests",
         }
     ]
 
-    email_html = format_email_html(test_papers)
+    email_html = format_email_html(test_papers, recipient_email="test@example.com")
     print("HTML Preview generated successfully")
     print(f"Length: {len(email_html)} characters")
 
