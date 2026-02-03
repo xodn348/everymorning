@@ -106,7 +106,7 @@ def send_digest_email(
     get_resend_client()
     
     if from_email is None:
-        from_email = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+        from_email = os.environ.get("RESEND_FROM_EMAIL", "everymorning <newsletter@stemem.info>")
     
     html_content = format_email_html(papers)
     
