@@ -44,13 +44,27 @@ export default function Home() {
         {/* Hero Section */}
         <section className="grid md:grid-cols-[1.2fr,1fr] gap-12 md:gap-20 mb-32">
           <div>
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-full text-xs text-cyan-400 font-medium">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Delivered daily at 7 AM CST
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-xs text-emerald-400 font-medium">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Read in 5 min
+              </span>
+            </div>
             <h2 className="text-3xl md:text-5xl font-light leading-tight mb-8 text-zinc-100">
-              Daily fresh stem paper<br />
-              <span className="text-cyan-400">delivered to your inbox</span>
+              Fresh papers every morning at <span className="text-cyan-400">7 AM</span>
             </h2>
             <p className="text-lg text-zinc-400 leading-relaxed max-w-xl">
-              Curated research papers from arXiv in Computer Science, Physics, Biology, and Mathematics. 
-              Start your day with the latest discoveries.
+              <strong className="text-zinc-200">Just published</strong> STEM research from arXiv — 
+              curated overnight and delivered before your coffee. 
+              <span className="text-cyan-400 font-medium">Read in 5 minutes.</span>
             </p>
           </div>
 
