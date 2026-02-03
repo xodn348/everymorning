@@ -59,7 +59,7 @@ export default function Home() {
               </span>
             </div>
             <h2 className="text-3xl md:text-5xl font-light leading-tight mb-8 text-zinc-100">
-              Fresh papers every morning at <span className="text-cyan-400">7 AM</span>
+              Fresh papers every morning at 7 AM
             </h2>
             <p className="text-lg text-zinc-400 leading-relaxed max-w-xl">
               <strong className="text-zinc-200">Just published</strong> STEM research from arXiv — 
