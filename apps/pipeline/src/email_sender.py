@@ -25,7 +25,7 @@ def mask_email(email: str) -> str:
 
 def format_email_html(papers: List[Dict[str, Any]]) -> str:
     """Format papers into minimal HTML email with proper escaping."""
-    
+
     papers_html = ""
     for paper in papers:
         title = html.escape(paper.get("title", "Unknown"))
@@ -34,7 +34,7 @@ def format_email_html(papers: List[Dict[str, Any]]) -> str:
         # Escape URL to prevent injection
         raw_url = paper.get("url", "#")
         url = html.escape(raw_url) if raw_url else "#"
-        
+
         papers_html += f'''
           <tr>
             <td style="padding: 20px; background: #ffffff; border-radius: 8px;">
@@ -53,8 +53,8 @@ def format_email_html(papers: List[Dict[str, Any]]) -> str:
           </tr>
           <tr><td style="height: 12px;"></td></tr>
         '''
-    
-    email_html = f'''<!DOCTYPE html>
+
+    email_html = f"""<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -93,54 +93,58 @@ def format_email_html(papers: List[Dict[str, Any]]) -> str:
     </tr>
   </table>
 </body>
-</html>'''
+</html>"""
     return email_html
 
 
 def send_digest_email(
-    to_emails: List[str], 
-    papers: List[Dict[str, Any]], 
-    from_email: str = None
+    to_emails: List[str], papers: List[Dict[str, Any]], from_email: str = None
 ) -> Dict[str, Any]:
     """Send digest email to subscribers."""
     get_resend_client()
-    
+
     if from_email is None:
-        from_email = os.environ.get("RESEND_FROM_EMAIL", "everymorning <newsletter@stemem.info>")
-    
+        from_email = os.environ.get(
+            "RESEND_FROM_EMAIL", "everymorning <fresh@stemem.info>"
+        )
+
     html_content = format_email_html(papers)
-    
+
     results = []
     for email in to_emails:
         masked = mask_email(email)
         try:
-            result = resend.Emails.send({
-                "from": from_email,
-                "to": email,
-                "subject": "everymorning - Today's Top STEM Papers",
-                "html": html_content
-            })
+            result = resend.Emails.send(
+                {
+                    "from": from_email,
+                    "to": email,
+                    "subject": "everymorning - Today's Top STEM Papers",
+                    "html": html_content,
+                }
+            )
             results.append({"email": email, "status": "sent", "id": result.get("id")})
             print(f"Email sent to {masked}")
         except Exception as e:
             results.append({"email": email, "status": "failed", "error": "Send error"})
             print(f"Failed to send to {masked}")
-    
+
     return {
-        "results": results, 
-        "total": len(to_emails), 
-        "sent": sum(1 for r in results if r["status"] == "sent")
+        "results": results,
+        "total": len(to_emails),
+        "sent": sum(1 for r in results if r["status"] == "sent"),
     }
 
 
 def main():
     """Test run - generates HTML preview."""
-    test_papers = [{
-        "title": "Test Paper",
-        "summary": "Test summary content",
-        "url": "https://example.com"
-    }]
-    
+    test_papers = [
+        {
+            "title": "Test Paper",
+            "summary": "Test summary content",
+            "url": "https://example.com",
+        }
+    ]
+
     email_html = format_email_html(test_papers)
     print("HTML Preview generated successfully")
     print(f"Length: {len(email_html)} characters")
