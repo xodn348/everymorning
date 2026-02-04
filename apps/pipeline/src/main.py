@@ -97,14 +97,16 @@ def main():
     telegram_sent = 0
 
     for subscriber in subscribers:
-        # Get personalized papers for this subscriber
+        # Get personalized papers, excluding already-sent ones
         preferred = subscriber.get("preferred_fields") or []
-        personalized = get_personalized_papers(summarized_papers, preferred, n=3)
-
-        # Exclude papers already sent to this subscriber
         if subscriber.get("email"):
             sent_ids = get_recently_sent_paper_ids(subscriber["email"])
-            personalized = [p for p in personalized if p.get("paperId") not in sent_ids]
+            available = [
+                p for p in summarized_papers if p.get("paperId") not in sent_ids
+            ]
+        else:
+            available = summarized_papers
+        personalized = get_personalized_papers(available, preferred, n=3)
 
         # Add selection reasons to each paper
         for paper in personalized:
