@@ -8,7 +8,7 @@ from src.scorer import score_papers, get_personalized_papers, generate_selection
 from src.summarizer import summarize_papers
 from src.email_sender import send_digest_email
 from src.telegram_sender import send_telegram_digest
-from src.db import get_supabase_client
+from src.db import get_supabase_client, get_recently_sent_paper_ids, save_sent_papers
 
 
 def log(message: str) -> None:
@@ -101,6 +101,11 @@ def main():
         preferred = subscriber.get("preferred_fields") or []
         personalized = get_personalized_papers(summarized_papers, preferred, n=3)
 
+        # Exclude papers already sent to this subscriber
+        if subscriber.get("email"):
+            sent_ids = get_recently_sent_paper_ids(subscriber["email"])
+            personalized = [p for p in personalized if p.get("paperId") not in sent_ids]
+
         # Add selection reasons to each paper
         for paper in personalized:
             paper["selection_reason"] = generate_selection_reason(paper)
@@ -130,6 +135,10 @@ def main():
             try:
                 result = send_digest_email([subscriber["email"]], personalized)
                 email_sent += result.get("sent", 0)
+                sent_paper_ids = [
+                    p.get("paperId") for p in personalized if p.get("paperId")
+                ]
+                save_sent_papers(sent_paper_ids, subscriber["email"])
             except Exception as e:
                 log(f"Error sending email: {e}")
 
