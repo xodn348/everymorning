@@ -2,8 +2,8 @@ name: Daily Digest
 
 on:
   schedule:
-    # 7 AM CST = UTC 13:00
-    - cron: '0 13 * * *'
+    # 6 AM CST (UTC 12:00) — GitHub Actions delays up to 1hr, so email arrives ~7 AM
+    - cron: '0 12 * * *'
   workflow_dispatch:
 
 jobs:
