@@ -19,6 +19,14 @@ We automatically collect the most impactful papers from Computer Science, Physic
 
 Just enter your email. That's it!
 
+### Screenshots
+
+![Homepage](./screenshot/homepage.png)
+*Clean, simple homepage - subscribe in seconds*
+
+![Email Digest](./screenshot/Top3%20Fresh%20STEM%20Papers.pdf)
+*Daily digest with 3-bullet summaries and selection reasons*
+
 ### Free
 
 $0/month. No ads. Unsubscribe anytime.
