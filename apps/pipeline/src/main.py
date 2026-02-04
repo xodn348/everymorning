@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Dict, Any
 
 from src.fetcher import fetch_all_fields
-from src.scorer import score_papers, get_personalized_papers
+from src.scorer import score_papers, get_personalized_papers, generate_selection_reason
 from src.summarizer import summarize_papers
 from src.email_sender import send_digest_email
 from src.telegram_sender import send_telegram_digest
@@ -100,6 +100,10 @@ def main():
         # Get personalized papers for this subscriber
         preferred = subscriber.get("preferred_fields") or []
         personalized = get_personalized_papers(summarized_papers, preferred, n=3)
+
+        # Add selection reasons to each paper
+        for paper in personalized:
+            paper["selection_reason"] = generate_selection_reason(paper)
 
         if not personalized:
             log(f"No papers for subscriber with fields {preferred}, skipping")
