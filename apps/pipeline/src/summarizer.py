@@ -78,8 +78,9 @@ def summarize_papers(
             # Don't log full title for privacy
             print(f"Summarized paper {len(summaries)}/{max_papers}")
         except Exception as e:
-            # Don't expose error details in output
-            print(f"Error summarizing paper {len(summaries) + 1}")
+            print(
+                f"Error summarizing paper {len(summaries) + 1}: {type(e).__name__}: {e}"
+            )
             summaries.append({**paper, "summary": "Summary temporarily unavailable"})
 
     return summaries
