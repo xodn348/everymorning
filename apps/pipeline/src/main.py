@@ -73,9 +73,9 @@ def main():
         return 1
 
     try:
-        log("Step 3: Summarizing top 30 papers")
-        top_30 = scored_papers[:30]
-        summarized_papers = summarize_papers(top_30, max_papers=30)
+        log("Step 3: Summarizing top 3 papers")
+        top_3 = scored_papers[:3]
+        summarized_papers = summarize_papers(top_3, max_papers=3)
         log(f"Summarized {len(summarized_papers)} papers")
     except Exception as e:
         log(f"Error summarizing papers: {e}")
