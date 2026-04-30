@@ -6,8 +6,7 @@ const MAX_KEYWORDS = 3
 
 type ExistingSubscriber = {
   id: string
-  is_active?: boolean | null
-  preferred_keywords?: string[] | null
+  telegram_chat_id?: string | null
 }
 
 function normalizeEmail(raw: FormDataEntryValue | null) {
@@ -26,12 +25,8 @@ function parseKeywords(raw: FormDataEntryValue | null) {
     .slice(0, MAX_KEYWORDS)
 }
 
-function chooseSubscriberToUpdate(subscribers: ExistingSubscriber[]) {
-  return (
-    subscribers.find((subscriber) => (subscriber.preferred_keywords?.length ?? 0) > 0) ??
-    subscribers.find((subscriber) => subscriber.is_active) ??
-    subscribers[0]
-  )
+function chooseTelegramChatId(subscribers: ExistingSubscriber[]) {
+  return subscribers.find((subscriber) => subscriber.telegram_chat_id)?.telegram_chat_id ?? null
 }
 
 export async function subscribe(formData: FormData) {
@@ -53,7 +48,7 @@ export async function subscribe(formData: FormData) {
 
   const existing = await supabase
     .from('subscribers')
-    .select('id,is_active,preferred_keywords')
+    .select('id,telegram_chat_id')
     .ilike('email', email)
 
   if (existing.error) {
@@ -61,53 +56,24 @@ export async function subscribe(formData: FormData) {
     return { error: 'Something went wrong' }
   }
 
-  if (existing.data && existing.data.length > 0) {
-    const target = chooseSubscriberToUpdate(existing.data)
-    const updatePayload = {
-      email,
-      is_active: true,
-      preferred_fields: preferredFields,
-      preferred_keywords: preferredKeywords ?? target.preferred_keywords ?? null,
-    }
+  const replacingExisting = Boolean(existing.data && existing.data.length > 0)
+  const telegramChatId = existing.data ? chooseTelegramChatId(existing.data) : null
 
-    let { error } = await supabase
+  if (replacingExisting) {
+    const deactivate = await supabase
       .from('subscribers')
-      .update(updatePayload)
-      .eq('id', target.id)
+      .update({ is_active: false, telegram_chat_id: null })
+      .ilike('email', email)
 
-    // Keep existing subscriptions working until the production DB migration is applied.
-    if (error && error.message?.includes('preferred_keywords')) {
-      const fallback = await supabase
-        .from('subscribers')
-        .update({
-          email,
-          is_active: true,
-          preferred_fields: preferredFields,
-        })
-        .eq('id', target.id)
-      error = fallback.error
-    }
-
-    if (error) {
-      console.error('Subscription update error:', error)
+    if (deactivate.error) {
+      console.error('Existing subscription replacement error:', deactivate.error)
       return { error: 'Something went wrong' }
     }
-
-    const duplicateCleanup = await supabase
-      .from('subscribers')
-      .update({ is_active: false })
-      .ilike('email', email)
-      .neq('id', target.id)
-
-    if (duplicateCleanup.error) {
-      console.error('Duplicate subscriber cleanup error:', duplicateCleanup.error)
-    }
-
-    return { success: true, updated: true }
   }
 
   const subscriber = {
     email,
+    telegram_chat_id: telegramChatId,
     preferred_fields: preferredFields,
     preferred_keywords: preferredKeywords,
   }
@@ -135,7 +101,7 @@ export async function subscribe(formData: FormData) {
     return { error: 'Something went wrong' }
   }
   
-  return { success: true }
+  return { success: true, replaced: replacingExisting }
 }
 
 export async function unsubscribe(email: string) {
