@@ -30,13 +30,26 @@ export async function subscribe(formData: FormData) {
     process.env.SUPABASE_ANON_KEY!
   )
   
-  const { error } = await supabase
+  const subscriber = {
+    email,
+    preferred_fields: fields.length > 0 ? fields : null,
+    preferred_keywords: keywords.length > 0 ? keywords : null,
+  }
+
+  let { error } = await supabase
     .from('subscribers')
-    .insert({ 
-      email, 
-      preferred_fields: fields.length > 0 ? fields : null,
-      preferred_keywords: keywords.length > 0 ? keywords : null,
-    })
+    .insert(subscriber)
+
+  // Keep existing subscriptions working until the production DB migration is applied.
+  if (error && error.message?.includes('preferred_keywords')) {
+    const fallback = await supabase
+      .from('subscribers')
+      .insert({
+        email,
+        preferred_fields: fields.length > 0 ? fields : null,
+      })
+    error = fallback.error
+  }
   
   if (error) {
     if (error.code === '23505') {

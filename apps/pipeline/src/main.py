@@ -19,12 +19,23 @@ def log(message: str) -> None:
 def get_subscribers() -> List[Dict[str, Any]]:
     try:
         supabase = get_supabase_client()
-        result = (
-            supabase.table("subscribers")
-            .select("email,telegram_chat_id,preferred_fields,preferred_keywords")
-            .eq("is_active", True)
-            .execute()
-        )
+        try:
+            result = (
+                supabase.table("subscribers")
+                .select("email,telegram_chat_id,preferred_fields,preferred_keywords")
+                .eq("is_active", True)
+                .execute()
+            )
+        except Exception as e:
+            if "preferred_keywords" not in str(e):
+                raise
+            log("preferred_keywords column not found; using legacy subscriber fields")
+            result = (
+                supabase.table("subscribers")
+                .select("email,telegram_chat_id,preferred_fields")
+                .eq("is_active", True)
+                .execute()
+            )
 
         subscribers = []
         if result.data:
