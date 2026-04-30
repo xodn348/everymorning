@@ -62,7 +62,7 @@ export default function Home() {
               Fresh papers every morning at 7 AM
             </h2>
             <p className="text-lg text-zinc-400 leading-relaxed max-w-xl">
-              <strong className="text-zinc-200">Just published</strong> STEM research from arXiv — 
+              <strong className="text-zinc-200">Just published</strong> STEM research from Semantic Scholar — 
               curated overnight and delivered before your coffee. 
               <span className="text-cyan-400 font-medium">Read in 5 minutes.</span>
             </p>
@@ -89,8 +89,25 @@ export default function Home() {
                 </div>
 
                 <div>
+                  <label htmlFor="keywords" className="block text-sm font-medium text-zinc-300 mb-2">
+                    Keywords <span className="text-zinc-500">(optional, max 3)</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="keywords"
+                    name="keywords"
+                    disabled={status === 'loading' || status === 'success'}
+                    className="w-full px-4 py-3 bg-zinc-950 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="diffusion models, protein folding, CRISPR"
+                  />
+                  <p className="mt-2 text-xs text-zinc-500">
+                    We search these terms first, then use your selected domains as fallback.
+                  </p>
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-3">
-                    Interested in <span className="text-zinc-500">(optional, defaults to all)</span>
+                    Fallback domains <span className="text-zinc-500">(optional, defaults to all)</span>
                   </label>
                   <div className="space-y-2.5">
                     {[

@@ -3,8 +3,8 @@ import argparse
 from datetime import datetime
 from typing import List, Dict, Any
 
-from src.fetcher import fetch_all_fields
-from src.scorer import score_papers, get_personalized_papers, generate_selection_reason
+from src.fetcher import fetch_all_fields, fetch_papers_for_keywords
+from src.scorer import score_papers, select_personalized_papers, normalize_keywords
 from src.summarizer import summarize_papers
 from src.email_sender import send_digest_email
 from src.telegram_sender import send_telegram_digest
@@ -21,7 +21,7 @@ def get_subscribers() -> List[Dict[str, Any]]:
         supabase = get_supabase_client()
         result = (
             supabase.table("subscribers")
-            .select("email,telegram_chat_id,preferred_fields")
+            .select("email,telegram_chat_id,preferred_fields,preferred_keywords")
             .eq("is_active", True)
             .execute()
         )
@@ -36,6 +36,9 @@ def get_subscribers() -> List[Dict[str, Any]]:
                         if row.get("telegram_chat_id")
                         else None,
                         "preferred_fields": row.get("preferred_fields") or [],
+                        "preferred_keywords": normalize_keywords(
+                            row.get("preferred_keywords") or []
+                        ),
                     }
                 )
 
@@ -44,6 +47,70 @@ def get_subscribers() -> List[Dict[str, Any]]:
     except Exception as e:
         log(f"Error fetching subscribers: {e}")
         return []
+
+
+def unique_keywords(subscribers: List[Dict[str, Any]]) -> List[str]:
+    keywords = []
+    for subscriber in subscribers:
+        for keyword in normalize_keywords(subscriber.get("preferred_keywords") or []):
+            if keyword not in keywords:
+                keywords.append(keyword)
+    return keywords
+
+
+def fallback_fields(subscribers: List[Dict[str, Any]]) -> List[str]:
+    """
+    Return fallback domains to fetch. Empty means fetch all STEM domains.
+    If any subscriber has no selected domains, all domains are needed for that subscriber.
+    """
+    fields = []
+    for subscriber in subscribers:
+        preferred = subscriber.get("preferred_fields") or []
+        if not preferred:
+            return []
+        for field in preferred:
+            if field not in fields:
+                fields.append(field)
+    return fields
+
+
+def flatten_keyword_results(
+    keywords: List[str], keyword_results: Dict[str, List[Dict[str, Any]]]
+) -> List[Dict[str, Any]]:
+    papers = []
+    for keyword in keywords:
+        papers.extend(keyword_results.get(keyword, []))
+    return papers
+
+
+def build_summary_map(papers: List[Dict[str, Any]], dry_run: bool) -> Dict[str, Dict[str, Any]]:
+    unique = {}
+    for paper in papers:
+        paper_id = paper.get("paperId")
+        if paper_id and paper_id not in unique:
+            unique[paper_id] = paper
+
+    if dry_run:
+        return {
+            paper_id: {**paper, "summary": paper.get("summary", "Dry run: summary skipped")}
+            for paper_id, paper in unique.items()
+        }
+
+    summarized = summarize_papers(list(unique.values()), max_papers=len(unique))
+    return {paper.get("paperId"): paper for paper in summarized if paper.get("paperId")}
+
+
+def attach_summaries(
+    selected_by_subscriber: List[Dict[str, Any]], summary_map: Dict[str, Dict[str, Any]]
+) -> None:
+    for digest in selected_by_subscriber:
+        summarized = []
+        for paper in digest["papers"]:
+            paper_id = paper.get("paperId")
+            merged = {**paper, **summary_map.get(paper_id, {})}
+            merged["selection_reason"] = paper.get("selection_reason")
+            summarized.append(merged)
+        digest["papers"] = summarized
 
 
 def main():
@@ -58,31 +125,7 @@ def main():
     log("Starting daily digest pipeline")
 
     try:
-        log("Step 1: Fetching papers from all STEM fields")
-        papers = fetch_all_fields(days=7, limit_per_field=50)
-        log(f"Fetched {len(papers)} papers")
-    except Exception as e:
-        log(f"Error fetching papers: {e}")
-        return 1
-
-    try:
-        log("Step 2: Scoring papers")
-        scored_papers = score_papers(papers)
-    except Exception as e:
-        log(f"Error scoring papers: {e}")
-        return 1
-
-    try:
-        log("Step 3: Summarizing top 12 papers")
-        top_12 = scored_papers[:12]
-        summarized_papers = summarize_papers(top_12, max_papers=12)
-        log(f"Summarized {len(summarized_papers)} papers")
-    except Exception as e:
-        log(f"Error summarizing papers: {e}")
-        return 1
-
-    try:
-        log("Step 4: Fetching subscribers")
+        log("Step 1: Fetching subscribers")
         subscribers = get_subscribers()
     except Exception as e:
         log(f"Error fetching subscribers: {e}")
@@ -92,64 +135,117 @@ def main():
         log("No subscribers found, skipping sending")
         return 0
 
-    # Step 5: Send personalized digests
+    keywords = unique_keywords(subscribers)
+    fields = fallback_fields(subscribers)
+
+    try:
+        log(f"Step 2: Searching {len(keywords)} unique subscriber keywords")
+        keyword_results = fetch_papers_for_keywords(
+            keywords, days=30, limit_per_keyword=20
+        )
+        keyword_papers = flatten_keyword_results(keywords, keyword_results)
+        log(f"Fetched {len(keyword_papers)} keyword papers")
+    except Exception as e:
+        log(f"Error fetching keyword papers: {e}")
+        keyword_results = {}
+        keyword_papers = []
+
+    try:
+        fallback_label = ", ".join(fields) if fields else "all STEM domains"
+        log(f"Step 3: Fetching fallback papers from {fallback_label}")
+        fallback_papers = fetch_all_fields(days=7, limit_per_field=50, fields=fields or None)
+        log(f"Fetched {len(fallback_papers)} fallback papers")
+    except Exception as e:
+        log(f"Error fetching fallback papers: {e}")
+        fallback_papers = []
+
+    try:
+        log("Step 4: Scoring papers")
+        score_papers(keyword_papers)
+        scored_fallback_papers = score_papers(fallback_papers)
+    except Exception as e:
+        log(f"Error scoring papers: {e}")
+        return 1
+
+    selected_by_subscriber = []
+    all_selected = []
+
+    for subscriber in subscribers:
+        preferred_fields = subscriber.get("preferred_fields") or []
+        preferred_keywords = subscriber.get("preferred_keywords") or []
+        subscriber_keyword_papers = flatten_keyword_results(
+            preferred_keywords, keyword_results
+        )
+        subscriber_keyword_papers = score_papers(subscriber_keyword_papers)
+
+        if subscriber.get("email"):
+            sent_ids = get_recently_sent_paper_ids(subscriber["email"])
+        else:
+            sent_ids = []
+
+        personalized = select_personalized_papers(
+            subscriber_keyword_papers,
+            scored_fallback_papers,
+            preferred_fields,
+            preferred_keywords,
+            sent_ids,
+            n=3,
+        )
+
+        if not personalized:
+            log(
+                f"No papers for subscriber with keywords {preferred_keywords} and fields {preferred_fields}, skipping"
+            )
+            continue
+
+        selected_by_subscriber.append({"subscriber": subscriber, "papers": personalized})
+        all_selected.extend(personalized)
+
+    try:
+        log(f"Step 5: Summarizing {len({p.get('paperId') for p in all_selected if p.get('paperId')})} unique selected papers")
+        summary_map = build_summary_map(all_selected, dry_run=args.dry_run)
+        attach_summaries(selected_by_subscriber, summary_map)
+    except Exception as e:
+        log(f"Error summarizing papers: {e}")
+        return 1
+
     email_sent = 0
     telegram_sent = 0
 
-    for subscriber in subscribers:
-        # Get personalized papers, excluding already-sent ones
-        preferred = subscriber.get("preferred_fields") or []
-        if subscriber.get("email"):
-            sent_ids = get_recently_sent_paper_ids(subscriber["email"])
-            available = [
-                p for p in summarized_papers if p.get("paperId") not in sent_ids
-            ]
-        else:
-            available = summarized_papers
-        personalized = get_personalized_papers(available, preferred, n=3)
-
-        # Add selection reasons to each paper
-        for paper in personalized:
-            paper["selection_reason"] = generate_selection_reason(paper)
-
-        if not personalized:
-            log(f"No papers for subscriber with fields {preferred}, skipping")
-            continue
+    for digest in selected_by_subscriber:
+        subscriber = digest["subscriber"]
+        personalized = digest["papers"]
 
         if args.dry_run:
-            # Dry run: print instead of send
             email = subscriber.get("email") or "(no email)"
             chat_id = subscriber.get("telegram_chat_id") or "(no telegram)"
-            fields_str = ", ".join(preferred) if preferred else "all fields"
+            fields_str = ", ".join(subscriber.get("preferred_fields") or []) or "all fields"
+            keywords_str = ", ".join(subscriber.get("preferred_keywords") or []) or "none"
 
             print(f"\n{'=' * 60}")
             print(f"SUBSCRIBER: {email} | Telegram: {chat_id}")
-            print(f"PREFERRED FIELDS: {fields_str}")
+            print(f"KEYWORDS: {keywords_str}")
+            print(f"FALLBACK DOMAINS: {fields_str}")
             print(f"PAPERS ({len(personalized)}):")
-            for i, p in enumerate(personalized, 1):
+            for i, paper in enumerate(personalized, 1):
                 print(
-                    f"  {i}. [{p.get('field', '?')}] {p.get('title', 'Unknown')[:60]}..."
+                    f"  {i}. [{paper.get('field', '?')}] {paper.get('title', 'Unknown')[:80]}"
                 )
-            continue  # Skip actual sending
+                print(f"     {paper.get('selection_reason', '')}")
+            continue
 
-        # Send email if subscriber has email
         if subscriber.get("email"):
             try:
                 result = send_digest_email([subscriber["email"]], personalized)
                 email_sent += result.get("sent", 0)
-                sent_paper_ids = [
-                    p.get("paperId") for p in personalized if p.get("paperId")
-                ]
+                sent_paper_ids = [p.get("paperId") for p in personalized if p.get("paperId")]
                 save_sent_papers(sent_paper_ids, subscriber["email"])
             except Exception as e:
                 log(f"Error sending email: {e}")
 
-        # Send telegram if subscriber has chat_id
         if subscriber.get("telegram_chat_id"):
             try:
-                result = send_telegram_digest(
-                    [subscriber["telegram_chat_id"]], personalized
-                )
+                result = send_telegram_digest([subscriber["telegram_chat_id"]], personalized)
                 telegram_sent += result.get("sent", 0)
             except Exception as e:
                 log(f"Error sending telegram: {e}")

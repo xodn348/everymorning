@@ -2,9 +2,24 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+const MAX_KEYWORDS = 3
+
+function parseKeywords(raw: FormDataEntryValue | null) {
+  if (!raw || typeof raw !== 'string') {
+    return []
+  }
+
+  return raw
+    .split(',')
+    .map((keyword) => keyword.trim().toLowerCase())
+    .filter(Boolean)
+    .slice(0, MAX_KEYWORDS)
+}
+
 export async function subscribe(formData: FormData) {
   const email = formData.get('email') as string
   const fields = formData.getAll('fields') as string[]
+  const keywords = parseKeywords(formData.get('keywords'))
   
   if (!email || !email.includes('@')) {
     return { error: 'Please enter a valid email address' }
@@ -19,7 +34,8 @@ export async function subscribe(formData: FormData) {
     .from('subscribers')
     .insert({ 
       email, 
-      preferred_fields: fields.length > 0 ? fields : null 
+      preferred_fields: fields.length > 0 ? fields : null,
+      preferred_keywords: keywords.length > 0 ? keywords : null,
     })
   
   if (error) {

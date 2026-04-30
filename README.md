@@ -31,6 +31,19 @@ Just enter your email. That's it!
 
 $0/month. No ads. Unsubscribe anytime.
 
+### How personalization works
+
+Subscribers can add up to **3 keywords** such as `diffusion models`, `protein folding`, or `CRISPR`. The daily pipeline searches Semantic Scholar directly for those keywords first, then fills any missing slots from the subscriber's selected fallback domains (CS, Physics, Biology, or Math).
+
+Daily curation order:
+1. Load active subscribers and collect unique keywords.
+2. Search each unique keyword once, with rate-limit backoff.
+3. Fetch fallback papers from selected domains.
+4. Score candidates by paper quality, keyword match, and recency.
+5. Pick 3 papers per subscriber, summarize only the unique selected papers, and send the digest.
+
+If a subscriber has no keywords, everymorning uses the selected domains directly. If keyword results are sparse, the selected domains keep the digest from going empty.
+
 ---
 
 ## Español

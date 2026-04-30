@@ -141,16 +141,99 @@ if __name__ == "__main__":
     main()
 
 
+def normalize_keywords(keywords: List[str], limit: int = 3) -> List[str]:
+    normalized = []
+    for keyword in keywords or []:
+        cleaned = str(keyword).strip().lower()
+        if cleaned and cleaned not in normalized:
+            normalized.append(cleaned)
+        if len(normalized) == limit:
+            break
+    return normalized
+
+
+def get_search_text(paper: Dict[str, Any]) -> str:
+    fields = paper.get("fieldsOfStudy") or []
+    return " ".join(
+        [
+            str(paper.get("title") or ""),
+            str(paper.get("abstract") or ""),
+            " ".join(str(field) for field in fields),
+        ]
+    ).lower()
+
+
+def get_keyword_match_details(
+    paper: Dict[str, Any], keywords: List[str]
+) -> Dict[str, Any]:
+    title = str(paper.get("title") or "").lower()
+    abstract = str(paper.get("abstract") or "").lower()
+    fields = " ".join(str(field) for field in paper.get("fieldsOfStudy") or []).lower()
+
+    matches = []
+    score = 0.0
+    for keyword in normalize_keywords(keywords):
+        location = None
+        if keyword in title:
+            location = "title"
+            score += 5.0
+        elif keyword in abstract:
+            location = "abstract"
+            score += 2.0
+        elif keyword in fields:
+            location = "field metadata"
+            score += 1.0
+        elif keyword in paper.get("matched_keywords", []):
+            location = "search result"
+            score += 0.5
+
+        if location:
+            matches.append({"keyword": keyword, "location": location})
+
+    return {"matches": matches, "score": score}
+
+
+def dedupe_papers(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    seen = set()
+    deduped = []
+    for paper in papers:
+        paper_id = paper.get("paperId") or paper.get("external_id") or paper.get("url")
+        if not paper_id or paper_id in seen:
+            continue
+        seen.add(paper_id)
+        deduped.append(paper)
+    return deduped
+
+
+def filter_papers_by_fields(
+    papers: List[Dict[str, Any]], fields: List[str]
+) -> List[Dict[str, Any]]:
+    """
+    Filter papers by preferred fallback domains.
+    If fields is empty or None, return all papers.
+    """
+    if not fields:
+        return papers
+
+    return [p for p in papers if p.get("field") in fields]
+
+
 def generate_selection_reason(paper: Dict[str, Any]) -> str:
     """
     Generate a human-readable reason why this paper was selected.
-    Based on the scoring factors.
+    Keyword matches are reported before general quality signals.
     """
+    keyword_matches = paper.get("keyword_matches") or []
+    if keyword_matches:
+        first = keyword_matches[0]
+        keyword = first.get("keyword")
+        location = first.get("location")
+        return f'Selected for: matches your keyword "{keyword}" in {location}'
+
     citations = paper.get("citationCount", 0) or 0
     influential = paper.get("influentialCitationCount", 0) or 0
     pub_date = paper.get("publicationDate") or paper.get("published_at")
 
-    # Calculate metrics
     if pub_date:
         if isinstance(pub_date, str):
             try:
@@ -161,73 +244,97 @@ def generate_selection_reason(paper: Dict[str, Any]) -> str:
     else:
         days_since_pub = 30
 
-    # Determine primary reason
     reasons = []
-
-    # High citation velocity
     if citations > 0 and days_since_pub < 60:
         velocity = citations / (days_since_pub / 30)
         if velocity > 5:
             reasons.append(f"{citations} citations in {days_since_pub} days")
 
-    # High influential ratio
     if influential > 0 and citations > 0:
         ratio = influential / citations
         if ratio > 0.3:
             reasons.append(f"{influential} influential citations")
 
-    # Very recent
     if days_since_pub <= 7:
         reasons.append("published this week")
     elif days_since_pub <= 14:
         reasons.append("published in last 2 weeks")
 
-    # High overall citations
     if citations >= 50:
         reasons.append(f"{citations} total citations")
 
-    # Build final reason
     if reasons:
         return "Selected for: " + ", ".join(reasons[:2])
-    else:
-        return "Selected for: emerging research with growing interest"
+    return "Selected for: emerging research with growing interest"
 
 
 def get_top_papers_with_reasons(
     papers: List[Dict[str, Any]], n: int = 3
 ) -> List[Dict[str, Any]]:
-    """
-    Select top N papers and add selection reasons.
-    """
     top = get_top_papers(papers, n)
     for paper in top:
         paper["selection_reason"] = generate_selection_reason(paper)
     return top
 
 
-def filter_papers_by_fields(
-    papers: List[Dict[str, Any]], fields: List[str]
+def select_personalized_papers(
+    keyword_papers: List[Dict[str, Any]],
+    fallback_papers: List[Dict[str, Any]],
+    preferred_fields: List[str],
+    preferred_keywords: List[str],
+    sent_ids: List[str],
+    n: int = 3,
 ) -> List[Dict[str, Any]]:
     """
-    Filter papers by preferred fields.
-    If fields is empty or None, return all papers.
+    Select a subscriber digest: keyword search results first, then selected-domain fallback.
     """
-    if not fields:
-        return papers
+    sent = set(sent_ids or [])
+    keywords = normalize_keywords(preferred_keywords)
 
-    return [p for p in papers if p.get("field") in fields]
+    keyword_candidates = []
+    if keywords:
+        for paper in dedupe_papers(keyword_papers):
+            if paper.get("paperId") in sent:
+                continue
+            match_details = get_keyword_match_details(paper, keywords)
+            if not match_details["matches"]:
+                continue
+            candidate = {**paper}
+            candidate["keyword_matches"] = match_details["matches"]
+            candidate["personalized_score"] = candidate.get("score", 0) + match_details["score"]
+            keyword_candidates.append(candidate)
+
+    keyword_candidates = sorted(
+        keyword_candidates,
+        key=lambda paper: paper.get("personalized_score", paper.get("score", 0)),
+        reverse=True,
+    )
+
+    selected = keyword_candidates[:n]
+    selected_ids = {paper.get("paperId") for paper in selected}
+
+    if len(selected) < n:
+        fallback_candidates = []
+        for paper in filter_papers_by_fields(dedupe_papers(fallback_papers), preferred_fields):
+            paper_id = paper.get("paperId")
+            if paper_id in sent or paper_id in selected_ids:
+                continue
+            fallback_candidates.append(paper)
+
+        fallback_candidates = sorted(
+            fallback_candidates, key=lambda paper: paper.get("score", 0), reverse=True
+        )
+        selected.extend(fallback_candidates[: n - len(selected)])
+
+    for paper in selected:
+        paper["selection_reason"] = generate_selection_reason(paper)
+
+    return selected[:n]
 
 
+# Backward-compatible wrapper for older callers/tests.
 def get_personalized_papers(
     all_papers: List[Dict[str, Any]], preferred_fields: List[str], n: int = 3
 ) -> List[Dict[str, Any]]:
-    """
-    Get top N papers personalized for a subscriber's preferred fields.
-    If no preferred fields, returns top papers from all fields.
-    Returns papers that already have summaries.
-    """
     filtered = filter_papers_by_fields(all_papers, preferred_fields)
-
-    # Sort by score (already calculated) and take top N
-    sorted_papers = sorted(filtered, key=lambda x: x.get("score", 0), reverse=True)
-    return sorted_papers[:n]
+    return sorted(filtered, key=lambda x: x.get("score", 0), reverse=True)[:n]
