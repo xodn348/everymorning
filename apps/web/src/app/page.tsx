@@ -16,7 +16,7 @@ export default function Home() {
       setMessage(result.error)
     } else {
       setStatus('success')
-      setMessage('Successfully subscribed! Check your inbox tomorrow morning.')
+      setMessage('Successfully subscribed! Your first 3-paper brief arrives tomorrow morning.')
     }
   }
 
@@ -49,7 +49,7 @@ export default function Home() {
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                Delivered daily at 7 AM CST
+                Delivered by 7 AM Central
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-xs text-emerald-400 font-medium">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -59,11 +59,12 @@ export default function Home() {
               </span>
             </div>
             <h2 className="text-3xl md:text-5xl font-light leading-tight mb-8 text-zinc-100">
-              Fresh papers every morning at 7 AM
+              Three papers worth your morning
             </h2>
             <p className="text-lg text-zinc-400 leading-relaxed max-w-xl">
-              <strong className="text-zinc-200">Just published</strong> STEM research from Semantic Scholar — 
-              curated overnight and delivered before your coffee. 
+              Every day we curate one paper that is <strong className="text-zinc-200">New in your field</strong>,{' '}
+              one that is <strong className="text-zinc-200">Heating up</strong>, and one{' '}
+              <strong className="text-zinc-200">Adjacent Insight</strong> from nearby research.{' '}
               <span className="text-cyan-400 font-medium">Read in 5 minutes.</span>
             </p>
           </div>
@@ -90,7 +91,7 @@ export default function Home() {
 
                 <div>
                   <label htmlFor="keywords" className="block text-sm font-medium text-zinc-300 mb-2">
-                    Keywords <span className="text-zinc-500">(optional, max 3)</span>
+                    Custom keywords <span className="text-zinc-500">(optional, max 3)</span>
                   </label>
                   <input
                     type="text"
@@ -101,13 +102,13 @@ export default function Home() {
                     placeholder="diffusion models, protein folding, CRISPR"
                   />
                   <p className="mt-2 text-xs text-zinc-500">
-                    We search these terms first, then use your selected domains as fallback.
+                    We personalize your three picks around these terms first.
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-3">
-                    Fallback domains <span className="text-zinc-500">(optional, defaults to all)</span>
+                    Selected domains <span className="text-zinc-500">(fallback/context, optional)</span>
                   </label>
                   <div className="space-y-2.5">
                     {[
@@ -185,29 +186,27 @@ export default function Home() {
 
          {/* How We Select Papers */}
          <section className="mb-32">
-           <h2 className="text-2xl font-light text-zinc-100 mb-8">How We Select Papers</h2>
+           <h2 className="text-2xl font-light text-zinc-100 mb-8">Your 3-paper morning brief</h2>
            <div className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-8">
-             <p className="text-zinc-400 mb-6">
-               Every morning, we analyze hundreds of papers from Semantic Scholar and rank them using a weighted scoring algorithm:
+             <p className="text-zinc-400 mb-8 max-w-3xl">
+               Every morning, we turn the overnight research stream into three clear reasons to open your inbox:
+               one paper from your core interests, one paper gaining momentum, and one paper that expands your map.
              </p>
-             <div className="grid md:grid-cols-2 gap-6">
+             <div className="grid md:grid-cols-3 gap-6">
                {[
-                 { weight: '35%', title: 'Citation Velocity', desc: 'How fast the paper is being cited relative to its age' },
-                 { weight: '25%', title: 'Influential Citations', desc: 'Citations from other highly-cited papers' },
-                 { weight: '20%', title: 'Recency', desc: 'Newer papers get a boost to surface fresh research' },
-                 { weight: '20%', title: 'Field Diversity', desc: 'Balanced coverage across CS, Physics, Bio, and Math' },
-               ].map((factor, i) => (
-                 <div key={i} className="flex gap-4">
-                   <div className="text-cyan-400 font-mono text-sm w-12 shrink-0">{factor.weight}</div>
-                   <div>
-                     <div className="text-zinc-200 font-medium">{factor.title}</div>
-                     <div className="text-zinc-500 text-sm">{factor.desc}</div>
-                   </div>
+                 { label: '01', title: 'New in your field', desc: 'A fresh paper matched to your custom keywords or selected research domains.' },
+                 { label: '02', title: 'Heating up', desc: 'A paper showing early traction through citations, attention, or fast-moving discussion.' },
+                 { label: '03', title: 'Adjacent Insight', desc: 'A useful idea from a neighboring field that could change how you think about your work.' },
+               ].map((pick) => (
+                 <div key={pick.label} className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-5">
+                   <div className="text-cyan-400 font-mono text-xs mb-4">{pick.label}</div>
+                   <div className="text-zinc-100 font-medium mb-2">{pick.title}</div>
+                   <div className="text-zinc-500 text-sm leading-relaxed">{pick.desc}</div>
                  </div>
                ))}
              </div>
              <p className="text-zinc-500 text-sm mt-6 pt-6 border-t border-zinc-800">
-               Each paper in your digest includes a selection reason explaining why it stood out.
+               Add up to three custom keywords for precision. Your selected domains provide fallback coverage and context when keyword matches are thin.
              </p>
            </div>
          </section>
@@ -216,16 +215,16 @@ export default function Home() {
          <section className="grid md:grid-cols-3 gap-8 mb-32">
            {[
              {
-               title: 'Daily Digest',
-               description: 'Curated papers delivered every morning at 7 AM CST',
+               title: '3 papers, daily',
+               description: 'New in your field, Heating up, and Adjacent Insight by 7 AM Central',
              },
              {
-               title: 'Multi-field',
-               description: 'CS, Physics, Biology, and Mathematics coverage',
+               title: 'Custom focus',
+               description: 'Use up to three keywords to steer the brief toward your research interests',
              },
              {
-               title: 'Open Source',
-               description: 'Built in public, free forever',
+               title: 'Domain-aware',
+               description: 'Selected domains keep the curation grounded when keywords need fallback context',
              },
            ].map((feature, i) => (
              <div

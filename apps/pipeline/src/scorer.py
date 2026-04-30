@@ -1,6 +1,13 @@
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from src.db import get_supabase_client
+
+
+DIGEST_CATEGORIES = [
+    "New in your field",
+    "Heating up",
+    "Adjacent Insight",
+]
 
 
 def calculate_score(paper: Dict[str, Any]) -> float:
@@ -193,6 +200,157 @@ def get_keyword_match_details(
     return {"matches": matches, "score": score}
 
 
+def parse_publication_date(paper: Dict[str, Any]) -> Optional[datetime]:
+    pub_date = paper.get("publicationDate") or paper.get("published_at")
+    if not pub_date:
+        return None
+    if isinstance(pub_date, datetime):
+        return pub_date.replace(tzinfo=None)
+    try:
+        return datetime.fromisoformat(str(pub_date).replace("Z", "+00:00")).replace(
+            tzinfo=None
+        )
+    except (TypeError, ValueError):
+        return None
+
+
+def days_since_publication(paper: Dict[str, Any]) -> Optional[int]:
+    pub_date = parse_publication_date(paper)
+    if not pub_date:
+        return None
+    return max(0, (datetime.now() - pub_date).days)
+
+
+def is_recent_paper(paper: Dict[str, Any], days: int) -> bool:
+    age = days_since_publication(paper)
+    return age is not None and age <= days
+
+
+def citation_velocity_score(paper: Dict[str, Any]) -> float:
+    citations = paper.get("citationCount", 0) or 0
+    age = days_since_publication(paper)
+    months_since_pub = max(1.0, (age if age is not None else 30) / 30)
+    citations_per_month = citations / months_since_pub
+    return min(1.0, citations_per_month / 10)
+
+
+def influential_score(paper: Dict[str, Any]) -> float:
+    influential = paper.get("influentialCitationCount", 0) or 0
+    return min(1.0, influential / 10)
+
+
+def total_citations_score(paper: Dict[str, Any]) -> float:
+    citations = paper.get("citationCount", 0) or 0
+    return min(1.0, citations / 100)
+
+
+def recency_score(paper: Dict[str, Any], window_days: int) -> float:
+    age = days_since_publication(paper)
+    if age is None or age > window_days:
+        return 0.0
+    return max(0.0, (window_days - age) / window_days)
+
+
+def keyword_score(match_details: Dict[str, Any]) -> float:
+    return min(1.0, (match_details.get("score", 0.0) or 0.0) / 5.0)
+
+
+def paper_in_preferred_fields(
+    paper: Dict[str, Any], preferred_fields: List[str]
+) -> bool:
+    if not preferred_fields:
+        return True
+    return paper.get("field") in preferred_fields
+
+
+def paper_is_adjacent(
+    paper: Dict[str, Any], preferred_fields: List[str]
+) -> bool:
+    field = paper.get("field")
+    if field in (None, "", "other", "unknown"):
+        return True
+    return bool(preferred_fields) and field not in preferred_fields
+
+
+def score_digest_category(
+    paper: Dict[str, Any], category: str, match_details: Dict[str, Any]
+) -> float:
+    if category == "New in your field":
+        return (
+            influential_score(paper) * 40
+            + citation_velocity_score(paper) * 50
+            + recency_score(paper, 30) * 10
+        )
+    if category == "Heating up":
+        return (
+            citation_velocity_score(paper) * 60
+            + influential_score(paper) * 25
+            + total_citations_score(paper) * 15
+        )
+    if category == "Adjacent Insight":
+        return (
+            keyword_score(match_details) * 40
+            + citation_velocity_score(paper) * 30
+            + influential_score(paper) * 20
+            + recency_score(paper, 180) * 10
+        )
+    return paper.get("score", 0)
+
+
+def category_candidate_papers(
+    papers: List[Dict[str, Any]],
+    category: str,
+    preferred_fields: List[str],
+    keywords: List[str],
+    unavailable_ids: set,
+) -> List[Dict[str, Any]]:
+    candidates = []
+    for paper in papers:
+        paper_id = paper.get("paperId") or paper.get("external_id") or paper.get("url")
+        if not paper_id or paper_id in unavailable_ids:
+            continue
+
+        match_details = get_keyword_match_details(paper, keywords) if keywords else {
+            "matches": [],
+            "score": 0.0,
+        }
+        if keywords and not match_details["matches"]:
+            continue
+
+        if category == "New in your field":
+            if not is_recent_paper(paper, 30) or not paper_in_preferred_fields(
+                paper, preferred_fields
+            ):
+                continue
+        elif category == "Heating up":
+            if not is_recent_paper(paper, 90) or not paper_in_preferred_fields(
+                paper, preferred_fields
+            ):
+                continue
+        elif category == "Adjacent Insight":
+            if (
+                not is_recent_paper(paper, 180)
+                or not match_details["matches"]
+                or not paper_is_adjacent(paper, preferred_fields)
+            ):
+                continue
+
+        candidate = {**paper}
+        candidate["keyword_matches"] = match_details["matches"]
+        candidate["category"] = category
+        candidate["selection_category"] = category
+        candidate["personalized_score"] = round(
+            score_digest_category(candidate, category, match_details), 4
+        )
+        candidates.append(candidate)
+
+    return sorted(
+        candidates,
+        key=lambda paper: paper.get("personalized_score", paper.get("score", 0)),
+        reverse=True,
+    )
+
+
 def dedupe_papers(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     seen = set()
     deduped = []
@@ -228,7 +386,9 @@ def generate_selection_reason(paper: Dict[str, Any]) -> str:
         first = keyword_matches[0]
         keyword = first.get("keyword")
         location = first.get("location")
-        return f'Selected for: matches your keyword "{keyword}" in {location}'
+        category = paper.get("category")
+        prefix = f"{category}: " if category else ""
+        return f'{prefix}matches your keyword "{keyword}" in {location}'
 
     citations = paper.get("citationCount", 0) or 0
     influential = paper.get("influentialCitationCount", 0) or 0
@@ -264,8 +424,12 @@ def generate_selection_reason(paper: Dict[str, Any]) -> str:
         reasons.append(f"{citations} total citations")
 
     if reasons:
-        return "Selected for: " + ", ".join(reasons[:2])
-    return "Selected for: emerging research with growing interest"
+        reason = ", ".join(reasons[:2])
+    else:
+        reason = "emerging research with growing interest"
+
+    category = paper.get("category")
+    return f"{category}: {reason}" if category else f"Selected for: {reason}"
 
 
 def get_top_papers_with_reasons(
@@ -286,61 +450,31 @@ def select_personalized_papers(
     n: int = 3,
 ) -> List[Dict[str, Any]]:
     """
-    Select a subscriber digest: keyword search results first, then selected-domain fallback.
+    Select a subscriber digest with at most one paper from each digest category:
+    New in your field, Heating up, and Adjacent Insight.
     """
     sent = set(sent_ids or [])
     keywords = normalize_keywords(preferred_keywords)
+    all_candidates = dedupe_papers(keyword_papers + fallback_papers)
+    selected = []
+    unavailable_ids = set(sent)
 
-    keyword_candidates = []
-    if keywords:
-        for paper in dedupe_papers(keyword_papers):
-            if paper.get("paperId") in sent:
-                continue
-            match_details = get_keyword_match_details(paper, keywords)
-            if not match_details["matches"]:
-                continue
-            candidate = {**paper}
-            candidate["keyword_matches"] = match_details["matches"]
-            candidate["personalized_score"] = candidate.get("score", 0) + match_details["score"]
-            keyword_candidates.append(candidate)
-
-    keyword_candidates = sorted(
-        keyword_candidates,
-        key=lambda paper: paper.get("personalized_score", paper.get("score", 0)),
-        reverse=True,
-    )
-
-    selected = keyword_candidates[:n]
-    selected_ids = {paper.get("paperId") for paper in selected}
-
-    if len(selected) < n:
-        fallback_candidates = []
-        for paper in filter_papers_by_fields(dedupe_papers(fallback_papers), preferred_fields):
-            paper_id = paper.get("paperId")
-            if paper_id in sent or paper_id in selected_ids:
-                continue
-
-            candidate = {**paper}
-            if keywords:
-                match_details = get_keyword_match_details(candidate, keywords)
-                if not match_details["matches"]:
-                    continue
-                candidate["keyword_matches"] = match_details["matches"]
-                candidate["personalized_score"] = candidate.get("score", 0) + match_details["score"]
-
-            fallback_candidates.append(candidate)
-
-        fallback_candidates = sorted(
-            fallback_candidates,
-            key=lambda paper: paper.get("personalized_score", paper.get("score", 0)),
-            reverse=True,
+    for category in DIGEST_CATEGORIES[:n]:
+        candidates = category_candidate_papers(
+            all_candidates, category, preferred_fields, keywords, unavailable_ids
         )
-        selected.extend(fallback_candidates[: n - len(selected)])
+        if not candidates:
+            continue
+        chosen = candidates[0]
+        selected.append(chosen)
+        paper_id = chosen.get("paperId") or chosen.get("external_id") or chosen.get("url")
+        if paper_id:
+            unavailable_ids.add(paper_id)
 
     for paper in selected:
         paper["selection_reason"] = generate_selection_reason(paper)
 
-    return selected[:n]
+    return selected
 
 
 # Backward-compatible wrapper for older callers/tests.

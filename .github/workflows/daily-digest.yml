@@ -2,8 +2,8 @@ name: Daily Digest
 
 on:
   schedule:
-    # 6 AM CST (UTC 12:00) — GitHub Actions delays up to 1hr, so email arrives ~7 AM
-    - cron: '0 12 * * *'
+    # 4/5 AM Central (UTC 10:00) — leaves ~2h for API backoff and GitHub queueing before 7 AM
+    - cron: '0 10 * * *'
   workflow_dispatch:
 
 jobs:
@@ -33,3 +33,5 @@ jobs:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
+          SEMANTIC_SCHOLAR_REQUEST_INTERVAL_SECONDS: '2.5'
+          SEMANTIC_SCHOLAR_MAX_RETRIES: '4'

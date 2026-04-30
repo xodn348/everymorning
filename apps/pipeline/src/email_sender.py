@@ -88,11 +88,14 @@ def format_email_html(
         raw_summary = paper.get("summary", "No summary available")
         summary_html = convert_bullets_to_html(raw_summary)
         selection_reason = html.escape(paper.get("selection_reason", ""))
+        category = html.escape(
+            paper.get("category") or paper.get("selection_category") or ""
+        )
         raw_url = paper.get("url", "#")
         url = html.escape(raw_url) if raw_url else "#"
         field = paper.get("field", "")
 
-        paper_number = f"0{idx}" if idx < 10 else str(idx)
+        paper_label = category or (f"0{idx}" if idx < 10 else str(idx))
 
         ai_prompt = generate_ai_prompt(
             paper.get("title", ""),
@@ -109,7 +112,7 @@ def format_email_html(
                 <tr>
                   <td style="padding: 24px; text-align: left;">
                     <div style="margin-bottom: 12px; text-align: left;">
-                      <span style="display: inline-block; padding: 4px 10px; background: #6366f1; color: #ffffff; font-size: 12px; font-weight: 600; border-radius: 4px;">{paper_number}</span>
+                      <span style="display: inline-block; padding: 4px 10px; background: #6366f1; color: #ffffff; font-size: 12px; font-weight: 600; border-radius: 4px;">{paper_label}</span>
                     </div>
                     <a href="{url}" style="text-decoration: none;">
                       <h2 style="margin: 0 0 10px 0; font-size: 17px; font-weight: 600; color: #111827; line-height: 1.5; text-align: left;">
@@ -132,6 +135,26 @@ def format_email_html(
                         </td>
                       </tr>
                     </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        '''
+
+    if not papers:
+        papers_html = '''
+          <tr>
+            <td style="padding: 0 0 20px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: #f9f9fb; border: 1px solid #e2e2e8; border-radius: 8px;">
+                <tr>
+                  <td style="padding: 24px; text-align: left;">
+                    <h2 style="margin: 0 0 10px 0; font-size: 17px; font-weight: 600; color: #111827; line-height: 1.5; text-align: left;">
+                      No fresh papers today
+                    </h2>
+                    <p style="margin: 0; font-size: 15px; color: #374151; line-height: 1.7; text-align: left;">
+                      We did not find new papers matching your saved fields and keywords that were not already sent recently.
+                    </p>
                   </td>
                 </tr>
               </table>

@@ -167,6 +167,8 @@ def attach_summaries(
             paper_id = paper.get("paperId")
             merged = {**paper, **summary_map.get(paper_id, {})}
             merged["selection_reason"] = paper.get("selection_reason")
+            merged["category"] = paper.get("category")
+            merged["selection_category"] = paper.get("selection_category")
             summarized.append(merged)
         digest["papers"] = summarized
 
@@ -199,7 +201,7 @@ def main():
     try:
         log(f"Step 2: Searching {len(keywords)} unique subscriber keywords")
         keyword_results = fetch_papers_for_keywords(
-            keywords, days=30, limit_per_keyword=20
+            keywords, days=180, limit_per_keyword=20
         )
         keyword_papers = flatten_keyword_results(keywords, keyword_results)
         log(f"Fetched {len(keyword_papers)} keyword papers")
@@ -211,7 +213,9 @@ def main():
     try:
         fallback_label = ", ".join(fields) if fields else "all STEM domains"
         log(f"Step 3: Fetching fallback papers from {fallback_label}")
-        fallback_papers = fetch_all_fields(days=7, limit_per_field=50, fields=fields or None)
+        fallback_papers = fetch_all_fields(
+            days=180, limit_per_field=50, fields=fields or None
+        )
         log(f"Fetched {len(fallback_papers)} fallback papers")
     except Exception as e:
         log(f"Error fetching fallback papers: {e}")
@@ -252,15 +256,17 @@ def main():
 
         if not personalized:
             log(
-                f"No papers for subscriber with keywords {preferred_keywords} and fields {preferred_fields}, skipping"
+                f"No fresh papers for subscriber with keywords {preferred_keywords} and fields {preferred_fields}; sending empty digest"
             )
-            continue
 
         selected_by_subscriber.append({"subscriber": subscriber, "papers": personalized})
         all_selected.extend(personalized)
 
     try:
-        log(f"Step 5: Summarizing {len({p.get('paperId') for p in all_selected if p.get('paperId')})} unique selected papers")
+        selected_paper_ids = {
+            p.get("paperId") for p in all_selected if p.get("paperId")
+        }
+        log(f"Step 5: Summarizing {len(selected_paper_ids)} unique selected papers")
         summary_map = build_summary_map(all_selected, dry_run=args.dry_run)
         attach_summaries(selected_by_subscriber, summary_map)
     except Exception as e:
@@ -297,10 +303,12 @@ def main():
                 result = send_digest_email([subscriber["email"]], personalized)
                 sent_count = result.get("sent", 0)
                 email_sent += sent_count
-                if sent_count > 0:
-                    sent_paper_ids = [p.get("paperId") for p in personalized if p.get("paperId")]
+                if sent_count > 0 and personalized:
+                    sent_paper_ids = [
+                        p.get("paperId") for p in personalized if p.get("paperId")
+                    ]
                     save_sent_papers(sent_paper_ids, subscriber["email"])
-                else:
+                elif sent_count == 0:
                     log("Email delivery failed; not marking papers as sent")
             except Exception as e:
                 log(f"Error sending email: {e}")

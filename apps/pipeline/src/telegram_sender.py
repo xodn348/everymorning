@@ -48,6 +48,14 @@ def mask_id(chat_id: str) -> str:
 def format_digest_text(papers: List[Dict[str, Any]]) -> str:
     text = "<b>everymorning - Daily STEM Paper Digest</b>\n\n"
 
+    if not papers:
+        return (
+            text
+            + "<b>No fresh papers today</b>\n"
+            + "We did not find new papers matching your saved fields and keywords "
+            + "that were not already sent recently."
+        )
+
     for i, paper in enumerate(papers, 1):
         title = html.escape(paper.get("title", "Unknown"))
         raw_summary = paper.get("summary", "No summary available")
@@ -61,9 +69,13 @@ def format_digest_text(papers: List[Dict[str, Any]]) -> str:
 
         url = html.escape(paper.get("url", ""))
         selection_reason = html.escape(paper.get("selection_reason", ""))
+        category = html.escape(
+            paper.get("category") or paper.get("selection_category") or ""
+        )
         field = paper.get("field", "")
 
-        text += f"<b>#{i} {title}</b>\n"
+        heading = f"{category}: {title}" if category else f"#{i} {title}"
+        text += f"<b>{heading}</b>\n"
         if selection_reason:
             text += f"<i>{selection_reason}</i>\n"
         text += "\n"
