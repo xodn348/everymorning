@@ -38,6 +38,17 @@ def get_resend_client():
     return resend
 
 
+
+
+def sanitize_error(error: Exception) -> str:
+    """Return a log-safe, bounded error message without leaking configured secrets."""
+    message = f"{type(error).__name__}: {error}"
+    api_key = os.environ.get("RESEND_API_KEY")
+    if api_key:
+        message = message.replace(api_key, "<redacted>")
+    message = " ".join(message.split())
+    return message[:500] or "Send error"
+
 def mask_email(email: str) -> str:
     """Mask email for logging (show first 3 chars and domain)."""
     if "@" in email:
@@ -270,8 +281,9 @@ def send_digest_email(
             results.append({"email": email, "status": "sent", "id": result.get("id")})
             print(f"Email sent to {masked}")
         except Exception as e:
-            results.append({"email": email, "status": "failed", "error": "Send error"})
-            print(f"Failed to send to {masked}")
+            error_detail = sanitize_error(e)
+            results.append({"email": email, "status": "failed", "error": error_detail})
+            print(f"Failed to send to {masked}: {error_detail}")
 
     return {
         "results": results,

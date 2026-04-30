@@ -248,9 +248,13 @@ def main():
         if subscriber.get("email"):
             try:
                 result = send_digest_email([subscriber["email"]], personalized)
-                email_sent += result.get("sent", 0)
-                sent_paper_ids = [p.get("paperId") for p in personalized if p.get("paperId")]
-                save_sent_papers(sent_paper_ids, subscriber["email"])
+                sent_count = result.get("sent", 0)
+                email_sent += sent_count
+                if sent_count > 0:
+                    sent_paper_ids = [p.get("paperId") for p in personalized if p.get("paperId")]
+                    save_sent_papers(sent_paper_ids, subscriber["email"])
+                else:
+                    log("Email delivery failed; not marking papers as sent")
             except Exception as e:
                 log(f"Error sending email: {e}")
 
