@@ -319,10 +319,21 @@ def select_personalized_papers(
             paper_id = paper.get("paperId")
             if paper_id in sent or paper_id in selected_ids:
                 continue
-            fallback_candidates.append(paper)
+
+            candidate = {**paper}
+            if keywords:
+                match_details = get_keyword_match_details(candidate, keywords)
+                if not match_details["matches"]:
+                    continue
+                candidate["keyword_matches"] = match_details["matches"]
+                candidate["personalized_score"] = candidate.get("score", 0) + match_details["score"]
+
+            fallback_candidates.append(candidate)
 
         fallback_candidates = sorted(
-            fallback_candidates, key=lambda paper: paper.get("score", 0), reverse=True
+            fallback_candidates,
+            key=lambda paper: paper.get("personalized_score", paper.get("score", 0)),
+            reverse=True,
         )
         selected.extend(fallback_candidates[: n - len(selected)])
 
