@@ -1,5 +1,6 @@
 import os
 import time
+import random
 import requests
 from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
@@ -7,6 +8,9 @@ from src.db import get_supabase_client
 
 SEMANTIC_SCHOLAR_API = "https://api.semanticscholar.org/graph/v1"
 SEMANTIC_FIELDS = "paperId,title,abstract,authors,citationCount,influentialCitationCount,publicationDate,url,fieldsOfStudy"
+DEFAULT_REQUEST_INTERVAL_SECONDS = float(os.environ.get("SEMANTIC_SCHOLAR_REQUEST_INTERVAL_SECONDS", "2.5"))
+DEFAULT_MAX_RETRIES = int(os.environ.get("SEMANTIC_SCHOLAR_MAX_RETRIES", "5"))
+_last_request_at = 0.0
 
 # STEM field mapping
 FIELD_MAPPING = {
@@ -25,14 +29,38 @@ def get_semantic_scholar_headers() -> Dict[str, str]:
     return headers
 
 
+def wait_for_semantic_scholar_slot() -> None:
+    """Keep all Semantic Scholar calls below a conservative per-process rate."""
+    global _last_request_at
+    now = time.monotonic()
+    elapsed = now - _last_request_at
+    if elapsed < DEFAULT_REQUEST_INTERVAL_SECONDS:
+        time.sleep(DEFAULT_REQUEST_INTERVAL_SECONDS - elapsed)
+    _last_request_at = time.monotonic()
+
+
+def semantic_scholar_retry_wait(response: requests.Response, attempt: int) -> float:
+    retry_after = response.headers.get("Retry-After")
+    if retry_after:
+        try:
+            return min(float(retry_after), 180.0)
+        except ValueError:
+            pass
+
+    # Semantic Scholar often omits Retry-After. Fail slowly rather than burning retries.
+    base_waits = [15, 30, 60, 90, 120]
+    wait = base_waits[min(attempt, len(base_waits) - 1)]
+    return wait + random.uniform(0, 3)
+
+
 def request_paper_search(
     query: str,
     days: int,
     limit: int,
-    max_retries: int = 3,
+    max_retries: int = DEFAULT_MAX_RETRIES,
 ) -> List[Dict[str, Any]]:
     """
-    Search recent papers from Semantic Scholar with a 1 RPS throttle and 429 backoff.
+    Search recent papers from Semantic Scholar with conservative throttling and 429 backoff.
     """
     url = f"{SEMANTIC_SCHOLAR_API}/paper/search"
     date_from = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
@@ -45,12 +73,15 @@ def request_paper_search(
     headers = get_semantic_scholar_headers()
 
     for attempt in range(max_retries):
-        time.sleep(1.2)
+        wait_for_semantic_scholar_slot()
         response = requests.get(url, params=params, headers=headers, timeout=30)
 
         if response.status_code == 429:
-            wait_time = (2**attempt) * 5
-            print(f"Rate limited (429), waiting {wait_time}s before retry...")
+            wait_time = semantic_scholar_retry_wait(response, attempt)
+            print(
+                f"Rate limited (429) for query '{query}', "
+                f"waiting {wait_time:.1f}s before retry {attempt + 1}/{max_retries}..."
+            )
             time.sleep(wait_time)
             continue
 
