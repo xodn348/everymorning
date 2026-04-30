@@ -16,13 +16,58 @@ def log(message: str) -> None:
     print(f"[{timestamp}] {message}")
 
 
+def merge_unique(values: List[str]) -> List[str]:
+    merged = []
+    for value in values:
+        if value and value not in merged:
+            merged.append(value)
+    return merged
+
+
+def dedupe_subscribers(subscribers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Collapse duplicate active subscribers, preferring rows with keywords."""
+    by_email: Dict[str, Dict[str, Any]] = {}
+    passthrough: List[Dict[str, Any]] = []
+
+    for subscriber in subscribers:
+        email = (subscriber.get("email") or "").strip().lower()
+        subscriber["email"] = email or subscriber.get("email")
+        if not email:
+            passthrough.append(subscriber)
+            continue
+
+        existing = by_email.get(email)
+        if not existing:
+            by_email[email] = subscriber
+            continue
+
+        existing_has_keywords = bool(existing.get("preferred_keywords"))
+        subscriber_has_keywords = bool(subscriber.get("preferred_keywords"))
+        if subscriber_has_keywords and not existing_has_keywords:
+            keeper, other = subscriber, existing
+        else:
+            keeper, other = existing, subscriber
+        keeper["preferred_fields"] = merge_unique(
+            (keeper.get("preferred_fields") or []) + (other.get("preferred_fields") or [])
+        )
+        keeper["preferred_keywords"] = merge_unique(
+            (keeper.get("preferred_keywords") or []) + (other.get("preferred_keywords") or [])
+        )[:3]
+        by_email[email] = keeper
+
+    deduped = list(by_email.values()) + passthrough
+    if len(deduped) != len(subscribers):
+        log(f"Deduped active subscribers from {len(subscribers)} to {len(deduped)}")
+    return deduped
+
+
 def get_subscribers() -> List[Dict[str, Any]]:
     try:
         supabase = get_supabase_client()
         try:
             result = (
                 supabase.table("subscribers")
-                .select("email,telegram_chat_id,preferred_fields,preferred_keywords")
+                .select("id,email,telegram_chat_id,preferred_fields,preferred_keywords")
                 .eq("is_active", True)
                 .execute()
             )
@@ -32,7 +77,7 @@ def get_subscribers() -> List[Dict[str, Any]]:
             log("preferred_keywords column not found; using legacy subscriber fields")
             result = (
                 supabase.table("subscribers")
-                .select("email,telegram_chat_id,preferred_fields")
+                .select("id,email,telegram_chat_id,preferred_fields")
                 .eq("is_active", True)
                 .execute()
             )
@@ -42,7 +87,8 @@ def get_subscribers() -> List[Dict[str, Any]]:
             for row in result.data:
                 subscribers.append(
                     {
-                        "email": row.get("email"),
+                        "id": row.get("id"),
+                        "email": (row.get("email") or "").strip().lower() or None,
                         "telegram_chat_id": str(row["telegram_chat_id"])
                         if row.get("telegram_chat_id")
                         else None,
@@ -53,6 +99,7 @@ def get_subscribers() -> List[Dict[str, Any]]:
                     }
                 )
 
+        subscribers = dedupe_subscribers(subscribers)
         log(f"Retrieved {len(subscribers)} active subscribers")
         return subscribers
     except Exception as e:

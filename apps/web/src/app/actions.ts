@@ -4,6 +4,10 @@ import { createClient } from '@supabase/supabase-js'
 
 const MAX_KEYWORDS = 3
 
+function normalizeEmail(raw: FormDataEntryValue | null) {
+  return typeof raw === 'string' ? raw.trim().toLowerCase() : ''
+}
+
 function parseKeywords(raw: FormDataEntryValue | null) {
   if (!raw || typeof raw !== 'string') {
     return []
@@ -17,7 +21,7 @@ function parseKeywords(raw: FormDataEntryValue | null) {
 }
 
 export async function subscribe(formData: FormData) {
-  const email = formData.get('email') as string
+  const email = normalizeEmail(formData.get('email'))
   const fields = formData.getAll('fields') as string[]
   const keywords = parseKeywords(formData.get('keywords'))
   
@@ -30,6 +34,21 @@ export async function subscribe(formData: FormData) {
     process.env.SUPABASE_ANON_KEY!
   )
   
+  const existing = await supabase
+    .from('subscribers')
+    .select('id')
+    .ilike('email', email)
+    .limit(1)
+
+  if (existing.error) {
+    console.error('Duplicate subscription check error:', existing.error)
+    return { error: 'Something went wrong' }
+  }
+
+  if (existing.data && existing.data.length > 0) {
+    return { error: 'Already subscribed!' }
+  }
+
   const subscriber = {
     email,
     preferred_fields: fields.length > 0 ? fields : null,
@@ -63,6 +82,8 @@ export async function subscribe(formData: FormData) {
 }
 
 export async function unsubscribe(email: string) {
+  email = email.trim().toLowerCase()
+
   if (!email || !email.includes('@')) {
     return { error: 'Invalid email address' }
   }

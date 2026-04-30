@@ -13,6 +13,10 @@ CREATE TABLE subscribers (
 -- Existing deployments can migrate with:
 -- ALTER TABLE subscribers ADD COLUMN IF NOT EXISTS preferred_keywords TEXT[] DEFAULT '{}';
 -- ALTER TABLE subscribers ADD CONSTRAINT subscribers_preferred_keywords_max_3 CHECK (cardinality(preferred_keywords) <= 3);
+-- CREATE UNIQUE INDEX IF NOT EXISTS subscribers_active_email_unique_idx
+--   ON subscribers (lower(email)) WHERE email IS NOT NULL AND is_active = TRUE;
+-- CREATE UNIQUE INDEX IF NOT EXISTS subscribers_active_telegram_unique_idx
+--   ON subscribers (telegram_chat_id) WHERE telegram_chat_id IS NOT NULL AND is_active = TRUE;
 
 -- papers (수집된 논문)
 CREATE TABLE papers (
