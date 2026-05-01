@@ -90,19 +90,34 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <label htmlFor="keywords" className="block text-sm font-medium text-zinc-300 mb-2">
-                    Custom keywords <span className="text-zinc-500">(optional, max 3)</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="keywords"
-                    name="keywords"
-                    disabled={status === 'loading' || status === 'success'}
-                    className="w-full px-4 py-3 bg-zinc-950 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="diffusion models, protein folding, CRISPR"
-                  />
+                  <div className="flex items-baseline justify-between gap-3 mb-2">
+                    <label className="block text-sm font-medium text-zinc-300">
+                      Custom keywords <span className="text-zinc-500">(optional, up to 3)</span>
+                    </label>
+                    <span className="text-xs text-zinc-500">One idea per field</span>
+                  </div>
+                  <div className="space-y-2.5">
+                    {[
+                      { id: 'keyword-1', placeholder: 'diffusion models' },
+                      { id: 'keyword-2', placeholder: 'protein folding' },
+                      { id: 'keyword-3', placeholder: 'CRISPR' },
+                    ].map((keyword, index) => (
+                      <input
+                        key={keyword.id}
+                        type="text"
+                        id={keyword.id}
+                        name="keywords"
+                        maxLength={40}
+                        pattern="^(?!.*(?:^|\s)(?:and|or)(?:\s|$))(?!.*[,|+()]).*$"
+                        title="Use one short keyword phrase without or, and, commas, parentheses, |, or +."
+                        disabled={status === 'loading' || status === 'success'}
+                        className="w-full px-4 py-3 bg-zinc-950 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        placeholder={`Keyword ${index + 1}: ${keyword.placeholder}`}
+                      />
+                    ))}
+                  </div>
                   <p className="mt-2 text-xs text-zinc-500">
-                    We personalize your three picks around these terms first.
+                    Use short phrases only. Avoid search operators like “or”, “and”, parentheses, or comma-separated lists.
                   </p>
                 </div>
 

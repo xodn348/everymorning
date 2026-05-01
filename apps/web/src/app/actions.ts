@@ -3,6 +3,8 @@
 import { createClient } from '@supabase/supabase-js'
 
 const MAX_KEYWORDS = 3
+const MAX_KEYWORD_LENGTH = 40
+const DISALLOWED_KEYWORD_PATTERN = /\b(?:and|or)\b|[|+()]/i
 
 type ExistingSubscriber = {
   id: string
@@ -13,16 +15,29 @@ function normalizeEmail(raw: FormDataEntryValue | null) {
   return typeof raw === 'string' ? raw.trim().toLowerCase() : ''
 }
 
-function parseKeywords(raw: FormDataEntryValue | null) {
-  if (!raw || typeof raw !== 'string') {
-    return []
-  }
-
-  return raw
-    .split(',')
+function parseKeywords(rawValues: FormDataEntryValue[]) {
+  const keywords = rawValues
+    .filter((value): value is string => typeof value === 'string')
     .map((keyword) => keyword.trim().toLowerCase())
     .filter(Boolean)
     .slice(0, MAX_KEYWORDS)
+
+  const invalidKeyword = keywords.find(
+    (keyword) =>
+      keyword.length > MAX_KEYWORD_LENGTH ||
+      keyword.includes(',') ||
+      DISALLOWED_KEYWORD_PATTERN.test(keyword)
+  )
+
+  if (invalidKeyword) {
+    return {
+      keywords: [],
+      error:
+        'Please enter up to 3 short keywords. Use separate fields and avoid search operators like "or" or "and".',
+    }
+  }
+
+  return { keywords, error: null }
 }
 
 function chooseTelegramChatId(subscribers: ExistingSubscriber[]) {
@@ -32,10 +47,14 @@ function chooseTelegramChatId(subscribers: ExistingSubscriber[]) {
 export async function subscribe(formData: FormData) {
   const email = normalizeEmail(formData.get('email'))
   const fields = formData.getAll('fields') as string[]
-  const keywords = parseKeywords(formData.get('keywords'))
+  const parsedKeywords = parseKeywords(formData.getAll('keywords'))
   
   if (!email || !email.includes('@')) {
     return { error: 'Please enter a valid email address' }
+  }
+
+  if (parsedKeywords.error) {
+    return { error: parsedKeywords.error }
   }
   
   const supabase = createClient(
@@ -44,7 +63,7 @@ export async function subscribe(formData: FormData) {
   )
   
   const preferredFields = fields.length > 0 ? fields : null
-  const preferredKeywords = keywords.length > 0 ? keywords : null
+  const preferredKeywords = parsedKeywords.keywords && parsedKeywords.keywords.length > 0 ? parsedKeywords.keywords : null
 
   const existing = await supabase
     .from('subscribers')
