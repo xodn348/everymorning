@@ -5,6 +5,11 @@ on:
     # 4/5 AM Central (UTC 10:00) — leaves ~2h for API backoff and GitHub queueing before 7 AM
     - cron: '0 10 * * *'
   workflow_dispatch:
+    inputs:
+      recipient_email:
+        description: 'Optional: send only to this subscriber email'
+        required: false
+        type: string
 
 jobs:
   digest:
@@ -25,7 +30,12 @@ jobs:
       
       - name: Run daily digest pipeline
         working-directory: apps/pipeline
-        run: uv run python -m src.main
+        run: |
+          args=()
+          if [ -n "${{ inputs.recipient_email }}" ]; then
+            args+=(--only-email "${{ inputs.recipient_email }}")
+          fi
+          uv run python -m src.main "${args[@]}"
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

@@ -173,6 +173,22 @@ def attach_summaries(
         digest["papers"] = summarized
 
 
+def filter_subscribers_by_email(
+    subscribers: List[Dict[str, Any]], only_email: str | None
+) -> List[Dict[str, Any]]:
+    if not only_email:
+        return subscribers
+
+    target = only_email.strip().lower()
+    filtered = [
+        subscriber
+        for subscriber in subscribers
+        if (subscriber.get("email") or "").strip().lower() == target
+    ]
+    log(f"Filtered subscribers to {len(filtered)} matching {target}")
+    return filtered
+
+
 def main():
     parser = argparse.ArgumentParser(description="Daily STEM digest pipeline")
     parser.add_argument(
@@ -180,13 +196,17 @@ def main():
         action="store_true",
         help="Print what would be sent without actually sending",
     )
+    parser.add_argument(
+        "--only-email",
+        help="Send or dry-run the digest for one subscriber email only",
+    )
     args = parser.parse_args()
 
     log("Starting daily digest pipeline")
 
     try:
         log("Step 1: Fetching subscribers")
-        subscribers = get_subscribers()
+        subscribers = filter_subscribers_by_email(get_subscribers(), args.only_email)
     except Exception as e:
         log(f"Error fetching subscribers: {e}")
         return 1
